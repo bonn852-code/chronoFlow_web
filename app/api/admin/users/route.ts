@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
   const { data: controls, error: controlErr } = ids.length
     ? await supabaseAdmin
         .from("user_account_controls")
-        .select("user_id,is_suspended,suspend_reason,suspended_at")
+        .select("user_id,is_suspended,suspend_reason,suspended_at,is_member,member_granted_at")
         .in("user_id", ids)
     : { data: [], error: null };
   if (controlErr) return jsonError("ユーザー制御情報の取得に失敗しました", 500);
@@ -36,7 +36,9 @@ export async function GET(req: NextRequest) {
         lastSignInAt: u.last_sign_in_at,
         suspended: Boolean(ctrl?.is_suspended),
         suspendReason: ctrl?.suspend_reason || null,
-        suspendedAt: ctrl?.suspended_at || null
+        suspendedAt: ctrl?.suspended_at || null,
+        isMember: Boolean(ctrl?.is_member),
+        memberGrantedAt: ctrl?.member_granted_at || null
       };
     }),
     total: data.total || users.length,
@@ -44,4 +46,3 @@ export async function GET(req: NextRequest) {
     pageSize
   });
 }
-

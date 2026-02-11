@@ -118,10 +118,17 @@ create table if not exists user_account_controls (
   is_suspended boolean not null default false,
   suspend_reason text null,
   suspended_at timestamptz null,
+  is_member boolean not null default false,
+  member_granted_at timestamptz null,
+  member_granted_by uuid null,
   suspended_by uuid null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table user_account_controls add column if not exists is_member boolean not null default false;
+alter table user_account_controls add column if not exists member_granted_at timestamptz null;
+alter table user_account_controls add column if not exists member_granted_by uuid null;
 
 create table if not exists contact_inquiries (
   id uuid primary key default gen_random_uuid(),

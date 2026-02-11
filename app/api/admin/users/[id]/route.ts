@@ -11,8 +11,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const { id } = await params;
   if (!isUuid(id)) return jsonError("IDが不正です", 400);
 
-  const body = (await req.json().catch(() => null)) as { suspended?: boolean; reason?: string } | null;
-  if (typeof body?.suspended !== "boolean") return jsonError("suspended の指定が必要です", 400);
+  const body = (await req.json().catch(() => null)) as { suspended?: boolean; reason?: string; isMember?: boolean } | null;
+  if (typeof body?.suspended !== "boolean" && typeof body?.isMember !== "boolean") {
+    return jsonError("更新対象が指定されていません", 400);
+  }
 
   const { data: userData, error: userErr } = await supabaseAdmin.auth.admin.getUserById(id);
   if (userErr || !userData?.user) return jsonError("ユーザーが見つかりません", 404);
@@ -20,12 +22,23 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const email = userData.user.email?.toLowerCase() || "";
   if (email === env.adminEmail.toLowerCase()) return jsonError("管理者アカウントは停止できません", 403);
 
-  const reason = body.suspended ? safeText(body.reason, 0, 500) : null;
+  const prev = await supabaseAdmin
+    .from("user_account_controls")
+    .select("*")
+    .eq("user_id", id)
+    .maybeSingle();
+
+  const current = prev.data || {};
+  const nextSuspended = typeof body.suspended === "boolean" ? body.suspended : Boolean(current.is_suspended);
+  const nextIsMember = typeof body.isMember === "boolean" ? body.isMember : Boolean(current.is_member);
+  const reason = nextSuspended ? safeText(body.reason, 0, 500) : null;
   const payload = {
     user_id: id,
-    is_suspended: body.suspended,
-    suspend_reason: body.suspended ? reason : null,
-    suspended_at: body.suspended ? new Date().toISOString() : null,
+    is_suspended: nextSuspended,
+    suspend_reason: nextSuspended ? reason : null,
+    suspended_at: nextSuspended ? new Date().toISOString() : null,
+    is_member: nextIsMember,
+    member_granted_at: nextIsMember ? new Date().toISOString() : null,
     updated_at: new Date().toISOString()
   };
 
@@ -33,10 +46,17 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (error) return jsonError("ユーザー停止状態の更新に失敗しました", 500);
 
   await logSecurityEvent({
-    eventType: body.suspended ? "user_suspended" : "user_unsuspended",
-    severity: body.suspended ? "warn" : "info",
+    eventType:
+      typeof body.suspended === "boolean"
+        ? body.suspended
+          ? "user_suspended"
+          : "user_unsuspended"
+        : nextIsMember
+          ? "member_access_granted"
+          : "member_access_revoked",
+    severity: nextSuspended ? "warn" : "info",
     target: userData.user.email ?? id,
-    detail: { reason: reason || null }
+    detail: { reason: reason || null, isMember: nextIsMember }
   });
 
   return jsonOk({ ok: true });
@@ -64,4 +84,3 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
 
   return jsonOk({ ok: true });
 }
-

@@ -18,10 +18,12 @@ export default function AssetsPage() {
   const [loading, setLoading] = useState(true);
   const [assets, setAssets] = useState<Asset[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [forbidden, setForbidden] = useState(false);
 
   async function load() {
     setLoading(true);
     setError(null);
+    setForbidden(false);
 
     const {
       data: { session }
@@ -41,7 +43,11 @@ export default function AssetsPage() {
 
     const data = (await res.json()) as { assets?: Asset[]; error?: string };
     if (!res.ok) {
-      setError(data.error || "素材一覧の取得に失敗しました");
+      if (res.status === 403) {
+        setForbidden(true);
+      } else {
+        setError(data.error || "素材一覧の取得に失敗しました");
+      }
       setLoading(false);
       return;
     }
@@ -70,8 +76,9 @@ export default function AssetsPage() {
         </div>
 
         {loading ? <p className="meta">読み込み中...</p> : null}
+        {forbidden ? <p className="meta">このページはメンバー限定です。権限付与後に利用できます。</p> : null}
         {error ? <p className="meta">{error}</p> : null}
-        {!loading && !error && !assets.length ? <p className="meta">現在配布中の素材はありません。</p> : null}
+        {!loading && !error && !forbidden && !assets.length ? <p className="meta">現在配布中の素材はありません。</p> : null}
 
         <div className="grid grid-2">
           {assets.map((asset) => (

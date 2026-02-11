@@ -14,6 +14,7 @@ export function SiteNav({ mobile }: { mobile?: boolean } = {}) {
   const [authReady, setAuthReady] = useState(false);
   const [loggedIn, setLoggedIn] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isMember, setIsMember] = useState(false);
 
   async function syncAdminSession(sessionToken?: string) {
     if (!sessionToken) return;
@@ -28,16 +29,16 @@ export function SiteNav({ mobile }: { mobile?: boolean } = {}) {
     await fetch("/api/admin/session/clear", { method: "POST", credentials: "same-origin" });
   }
 
-  async function checkSuspended(sessionToken?: string) {
-    if (!sessionToken) return false;
+  async function getUserStatus(sessionToken?: string) {
+    if (!sessionToken) return { suspended: false, isMember: false };
     const res = await fetch("/api/me/status", {
       method: "GET",
       headers: { Authorization: `Bearer ${sessionToken}` },
       credentials: "same-origin"
     });
-    if (!res.ok) return false;
-    const data = (await res.json()) as { suspended?: boolean };
-    return data.suspended === true;
+    if (!res.ok) return { suspended: false, isMember: false };
+    const data = (await res.json()) as { suspended?: boolean; isMember?: boolean };
+    return { suspended: data.suspended === true, isMember: data.isMember === true };
   }
 
   useEffect(() => {
@@ -45,12 +46,13 @@ export function SiteNav({ mobile }: { mobile?: boolean } = {}) {
     supabase.auth.getSession().then(async ({ data }) => {
       const session = data.session;
       if (!mounted) return;
-      const suspended = await checkSuspended(session?.access_token);
-      if (suspended) {
+      const status = await getUserStatus(session?.access_token);
+      if (status.suspended) {
         await supabase.auth.signOut();
         if (mounted) {
           setLoggedIn(false);
           setIsAdmin(false);
+          setIsMember(false);
           setAuthReady(true);
           await clearAdminSession().catch(() => undefined);
           router.replace("/auth/login?blocked=1");
@@ -61,6 +63,7 @@ export function SiteNav({ mobile }: { mobile?: boolean } = {}) {
       const email = session?.user?.email?.toLowerCase() || "";
       const admin = email === adminEmail;
       setIsAdmin(admin);
+      setIsMember(Boolean(session) && status.isMember);
       setAuthReady(true);
       if (admin) {
         void syncAdminSession(session?.access_token).catch(() => undefined);
@@ -75,11 +78,12 @@ export function SiteNav({ mobile }: { mobile?: boolean } = {}) {
       if (event === "SIGNED_OUT") {
         await clearAdminSession().catch(() => undefined);
       }
-      const suspended = await checkSuspended(session?.access_token);
-      if (suspended) {
+      const status = await getUserStatus(session?.access_token);
+      if (status.suspended) {
         await supabase.auth.signOut();
         setLoggedIn(false);
         setIsAdmin(false);
+        setIsMember(false);
         setAuthReady(true);
         await clearAdminSession().catch(() => undefined);
         router.replace("/auth/login?blocked=1");
@@ -89,6 +93,7 @@ export function SiteNav({ mobile }: { mobile?: boolean } = {}) {
       const email = session?.user?.email?.toLowerCase() || "";
       const admin = email === adminEmail;
       setIsAdmin(admin);
+      setIsMember(Boolean(session) && status.isMember);
       setAuthReady(true);
       if (admin) {
         void syncAdminSession(session?.access_token).catch(() => undefined);
@@ -138,7 +143,7 @@ export function SiteNav({ mobile }: { mobile?: boolean } = {}) {
         </span>
         <span className="nav-text">AE学習</span>
       </Link>
-      {authReady && loggedIn ? (
+      {authReady && loggedIn && isMember ? (
         <Link href="/assets" className={navClass((p) => p.startsWith("/assets"))} aria-label="Assets">
           <span className="nav-icon" aria-hidden="true">
             <Image src="/icons/assets.png" alt="" width={22} height={22} />

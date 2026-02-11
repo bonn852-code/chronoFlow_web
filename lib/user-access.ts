@@ -23,7 +23,7 @@ export async function getAuthUserFromRequest(req: NextRequest): Promise<{ user: 
 export async function getSuspensionState(userId: string): Promise<{ suspended: boolean; reason: string | null }> {
   const { data, error } = await supabaseAdmin
     .from("user_account_controls")
-    .select("is_suspended,suspend_reason")
+    .select("*")
     .eq("user_id", userId)
     .maybeSingle();
   if (error) {
@@ -36,5 +36,22 @@ export async function getSuspensionState(userId: string): Promise<{ suspended: b
   return {
     suspended: Boolean(data?.is_suspended),
     reason: data?.suspend_reason ?? null
+  };
+}
+
+export async function getUserAccessState(
+  userId: string
+): Promise<{ suspended: boolean; reason: string | null; isMember: boolean }> {
+  const { data, error } = await supabaseAdmin.from("user_account_controls").select("*").eq("user_id", userId).maybeSingle();
+  if (error) {
+    if ((error as { code?: string }).code === "42P01") {
+      return { suspended: false, reason: null, isMember: false };
+    }
+    return { suspended: false, reason: null, isMember: false };
+  }
+  return {
+    suspended: Boolean(data?.is_suspended),
+    reason: data?.suspend_reason ?? null,
+    isMember: Boolean(data?.is_member)
   };
 }

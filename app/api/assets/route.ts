@@ -3,7 +3,7 @@ import { applyRateLimit } from "@/lib/rate-limit";
 import { jsonError, jsonOk } from "@/lib/http";
 import { hasSameOrigin } from "@/lib/security";
 import { supabaseAdmin } from "@/lib/supabase";
-import { getAuthUserFromRequest, getSuspensionState } from "@/lib/user-access";
+import { getAuthUserFromRequest, getUserAccessState } from "@/lib/user-access";
 
 export async function GET(req: NextRequest) {
   if (!hasSameOrigin(req)) return jsonError("Forbidden", 403);
@@ -14,8 +14,9 @@ export async function GET(req: NextRequest) {
   const { user, error } = await getAuthUserFromRequest(req);
   if (!user) return jsonError(error || "認証が必要です", 401);
 
-  const suspension = await getSuspensionState(user.id);
-  if (suspension.suspended) return jsonError("停止中アカウントは素材を閲覧できません", 403);
+  const access = await getUserAccessState(user.id);
+  if (access.suspended) return jsonError("停止中アカウントは素材を閲覧できません", 403);
+  if (!access.isMember) return jsonError("メンバー限定ページです。メンバー権限が必要です", 403);
 
   const { data, error: fetchErr } = await supabaseAdmin
     .from("assets")

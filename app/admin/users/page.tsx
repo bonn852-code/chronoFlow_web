@@ -11,6 +11,8 @@ type AdminUser = {
   suspended: boolean;
   suspendReason: string | null;
   suspendedAt: string | null;
+  isMember: boolean;
+  memberGrantedAt: string | null;
 };
 
 export default function AdminUsersPage() {
@@ -54,6 +56,21 @@ export default function AdminUsersPage() {
     await load(page);
   }
 
+  async function changeMember(userId: string, next: boolean) {
+    const res = await fetch(`/api/admin/users/${userId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isMember: next })
+    });
+    const data = (await res.json()) as { error?: string };
+    if (!res.ok) {
+      setMessage(data.error || "メンバー権限の更新に失敗しました");
+      return;
+    }
+    setMessage(next ? "メンバー権限を付与しました" : "メンバー権限を解除しました");
+    await load(page);
+  }
+
   async function deleteUser(userId: string, email: string | null) {
     if (!window.confirm(`${email || userId} を削除します。元に戻せません。`)) return;
     const res = await fetch(`/api/admin/users/${userId}`, { method: "DELETE" });
@@ -73,7 +90,7 @@ export default function AdminUsersPage() {
       <section className="card stack">
         <h1>アカウント管理</h1>
         <AdminNav />
-        <p className="meta">停止したアカウントはログイン後も機能操作できません（申請・問い合わせ・削除などを拒否）。</p>
+        <p className="meta">停止したアカウントはログイン後も機能操作できません。メンバー権限を付与したユーザーだけ Assets を閲覧できます。</p>
         {message ? <p className="meta">{message}</p> : null}
       </section>
 
@@ -85,6 +102,7 @@ export default function AdminUsersPage() {
               <th>登録日</th>
               <th>最終ログイン</th>
               <th>状態</th>
+              <th>メンバー権限</th>
               <th>操作</th>
             </tr>
           </thead>
@@ -100,10 +118,14 @@ export default function AdminUsersPage() {
                 <td>{new Date(u.createdAt).toLocaleString("ja-JP")}</td>
                 <td>{u.lastSignInAt ? new Date(u.lastSignInAt).toLocaleString("ja-JP") : "-"}</td>
                 <td>{u.suspended ? "停止中" : "有効"}</td>
+                <td>{u.isMember ? "付与済み" : "未付与"}</td>
                 <td>
                   <div className="split admin-actions">
                     <button className="btn" type="button" onClick={() => changeSuspend(u.id, !u.suspended)}>
                       {u.suspended ? "停止解除" : "停止"}
+                    </button>
+                    <button className="btn" type="button" onClick={() => changeMember(u.id, !u.isMember)}>
+                      {u.isMember ? "会員解除" : "会員化"}
                     </button>
                     <button className="btn danger" type="button" onClick={() => deleteUser(u.id, u.email)}>
                       削除
