@@ -379,6 +379,18 @@ textarea {
   color: #3b5f85;
 }
 
+.alert-strong {
+  border: 1px solid rgba(26, 169, 255, 0.34);
+  border-radius: 14px;
+  padding: 14px;
+  background: linear-gradient(130deg, rgba(26, 169, 255, 0.18), rgba(53, 215, 160, 0.12));
+}
+
+.alert-strong h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
 .table {
   width: 100%;
   border-collapse: collapse;

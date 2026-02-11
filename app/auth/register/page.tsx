@@ -13,6 +13,8 @@ export default function RegisterPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [confirmEmail, setConfirmEmail] = useState<string | null>(null);
+  const [resending, setResending] = useState(false);
 
   async function onSubmit(formData: FormData) {
     setLoading(true);
@@ -36,7 +38,13 @@ export default function RegisterPage() {
       return;
     }
 
-    const { data, error: signUpError } = await supabase.auth.signUp({ email, password });
+    const { data, error: signUpError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/login`
+      }
+    });
     if (signUpError) {
       setError("新規登録に失敗しました。入力内容を確認してください。");
       setLoading(false);
@@ -44,7 +52,8 @@ export default function RegisterPage() {
     }
 
     if (data.user && !data.session) {
-      setMessage("登録しました。確認メールを送信しました。メールを確認してログインしてください。");
+      setConfirmEmail(email);
+      setMessage("確認メールを送信しました。メール内のURLを開いて登録を完了してください。");
       setLoading(false);
       return;
     }
@@ -60,6 +69,25 @@ export default function RegisterPage() {
     router.push("/account");
     router.refresh();
     setLoading(false);
+  }
+
+  async function resendConfirmation() {
+    if (!confirmEmail) return;
+    setResending(true);
+    setError(null);
+    const { error: resendError } = await supabase.auth.resend({
+      type: "signup",
+      email: confirmEmail,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/login`
+      }
+    });
+    if (resendError) {
+      setError("確認メールの再送に失敗しました。少し時間をおいて再試行してください。");
+    } else {
+      setMessage("確認メールを再送しました。");
+    }
+    setResending(false);
   }
 
   return (
@@ -101,6 +129,24 @@ export default function RegisterPage() {
       </form>
       {error ? <p className="meta">{error}</p> : null}
       {message ? <p className="meta">{message}</p> : null}
+      {confirmEmail ? (
+        <section className="alert-strong stack">
+          <h2>メール確認が必要です</h2>
+          <p>
+            <strong>{confirmEmail}</strong> に確認メールを送信しました。
+          </p>
+          <p>迷惑メールフォルダにも入っていないか必ず確認してください。</p>
+          <p>メール内URLがリンク化されていない場合は、URL全文をコピーしてブラウザへ貼り付けてください。</p>
+          <div className="split">
+            <button className="btn" type="button" onClick={resendConfirmation} disabled={resending}>
+              {resending ? "再送中..." : "確認メールを再送"}
+            </button>
+            <Link href="/auth/login" className="btn primary">
+              ログインへ
+            </Link>
+          </div>
+        </section>
+      ) : null}
       <p className="meta">
         すでにアカウントをお持ちの場合は <Link href="/auth/login">ログイン</Link>
       </p>

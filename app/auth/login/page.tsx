@@ -21,7 +21,12 @@ export default function LoginPage() {
 
     const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
     if (signInError) {
-      setError("ログインに失敗しました。メールアドレスかパスワードを確認してください。");
+      const msg = signInError.message || "";
+      if (/email.*not.*confirmed/i.test(msg)) {
+        setError("メール確認が完了していません。確認メール（迷惑メールフォルダ含む）を確認してください。");
+      } else {
+        setError("ログインに失敗しました。メールアドレスかパスワードを確認してください。");
+      }
       setLoading(false);
       return;
     }
