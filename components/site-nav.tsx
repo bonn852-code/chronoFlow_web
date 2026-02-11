@@ -1,21 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type MouseEvent } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 
 export function SiteNav({ mobile }: { mobile?: boolean } = {}) {
   const supabase = createSupabaseBrowserClient();
   const adminEmail = (process.env.NEXT_PUBLIC_ADMIN_EMAIL || "bonnedits852@gmail.com").toLowerCase();
+  const router = useRouter();
   const [loggedIn, setLoggedIn] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
 
   async function syncAdminSession(sessionToken?: string) {
-    if (!sessionToken) {
-      await fetch("/api/admin/session/clear", { method: "POST", credentials: "same-origin" });
-      return;
-    }
+    if (!sessionToken) return;
     await fetch("/api/admin/session/sync", {
       method: "POST",
       headers: { Authorization: `Bearer ${sessionToken}` },
@@ -23,33 +22,91 @@ export function SiteNav({ mobile }: { mobile?: boolean } = {}) {
     });
   }
 
+  async function clearAdminSession() {
+    await fetch("/api/admin/session/clear", { method: "POST", credentials: "same-origin" });
+  }
+
+  async function checkSuspended(sessionToken?: string) {
+    if (!sessionToken) return false;
+    const res = await fetch("/api/me/status", {
+      method: "GET",
+      headers: { Authorization: `Bearer ${sessionToken}` },
+      credentials: "same-origin"
+    });
+    if (!res.ok) return false;
+    const data = (await res.json()) as { suspended?: boolean };
+    return data.suspended === true;
+  }
+
   useEffect(() => {
     let mounted = true;
-    supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then(async ({ data }) => {
       const session = data.session;
       if (!mounted) return;
+      const suspended = await checkSuspended(session?.access_token);
+      if (suspended) {
+        await supabase.auth.signOut();
+        if (mounted) {
+          setLoggedIn(false);
+          setIsAdmin(false);
+          await clearAdminSession().catch(() => undefined);
+          router.replace("/auth/login?blocked=1");
+        }
+        return;
+      }
       setLoggedIn(Boolean(session));
       const email = session?.user?.email?.toLowerCase() || "";
       const admin = email === adminEmail;
       setIsAdmin(admin);
-      void syncAdminSession(admin ? session?.access_token : undefined).catch(() => undefined);
+      if (admin) {
+        void syncAdminSession(session?.access_token).catch(() => undefined);
+      } else if (session) {
+        void clearAdminSession().catch(() => undefined);
+      }
     });
 
     const {
       data: { subscription }
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === "SIGNED_OUT") {
+        await clearAdminSession().catch(() => undefined);
+      }
+      const suspended = await checkSuspended(session?.access_token);
+      if (suspended) {
+        await supabase.auth.signOut();
+        setLoggedIn(false);
+        setIsAdmin(false);
+        await clearAdminSession().catch(() => undefined);
+        router.replace("/auth/login?blocked=1");
+        return;
+      }
       setLoggedIn(Boolean(session));
       const email = session?.user?.email?.toLowerCase() || "";
       const admin = email === adminEmail;
       setIsAdmin(admin);
-      void syncAdminSession(admin ? session?.access_token : undefined).catch(() => undefined);
+      if (admin) {
+        void syncAdminSession(session?.access_token).catch(() => undefined);
+      } else {
+        void clearAdminSession().catch(() => undefined);
+      }
     });
 
     return () => {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [adminEmail, supabase.auth]);
+  }, [adminEmail, supabase.auth, router]);
+
+  async function openAdmin(event: MouseEvent<HTMLAnchorElement>) {
+    event.preventDefault();
+    const {
+      data: { session }
+    } = await supabase.auth.getSession();
+    if (session?.access_token) {
+      await syncAdminSession(session.access_token).catch(() => undefined);
+    }
+    router.push("/admin");
+  }
 
   return (
     <nav className={`nav site-nav${mobile ? " mobile-bottom-nav" : ""}`}>
@@ -76,6 +133,14 @@ export function SiteNav({ mobile }: { mobile?: boolean } = {}) {
           <Image src="/icons/learn.png" alt="" width={22} height={22} />
         </span>
         <span className="nav-text">AE学習</span>
+      </Link>
+      <Link href="/contact" className="nav-link" aria-label="お問い合わせ">
+        <span className="nav-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 5h16a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H8l-4 3V7a2 2 0 0 1 2-2z" />
+          </svg>
+        </span>
+        <span className="nav-text">お問い合わせ</span>
       </Link>
       {!loggedIn ? (
         <>
@@ -112,7 +177,7 @@ export function SiteNav({ mobile }: { mobile?: boolean } = {}) {
         </Link>
       ) : null}
       {isAdmin ? (
-        <Link href="/admin" className="nav-link" aria-label="管理">
+        <Link href="/admin" className="nav-link" aria-label="管理" onClick={openAdmin}>
           <span className="nav-icon" aria-hidden="true">
             <Image src="/icons/admin.png" alt="" width={22} height={22} />
           </span>

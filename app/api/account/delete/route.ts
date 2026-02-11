@@ -4,6 +4,8 @@ import { jsonError, jsonOk } from "@/lib/http";
 import { supabaseAdmin, supabasePublic } from "@/lib/supabase";
 import { safeText } from "@/lib/utils";
 import { hasSameOrigin } from "@/lib/security";
+import { getSuspensionState } from "@/lib/user-access";
+import { logSecurityEvent } from "@/lib/security-events";
 
 export async function POST(req: NextRequest) {
   if (!hasSameOrigin(req)) return jsonError("Forbidden", 403);
@@ -24,6 +26,8 @@ export async function POST(req: NextRequest) {
     error: userErr
   } = await supabaseAdmin.auth.getUser(token);
   if (userErr || !user || !user.email) return jsonError("認証が無効です", 401);
+  const suspension = await getSuspensionState(user.id);
+  if (suspension.suspended) return jsonError("停止中アカウントは操作できません", 403);
 
   const { error: passwordErr } = await supabasePublic.auth.signInWithPassword({
     email: user.email,
@@ -33,6 +37,12 @@ export async function POST(req: NextRequest) {
 
   const { error: deleteErr } = await supabaseAdmin.auth.admin.deleteUser(user.id);
   if (deleteErr) return jsonError("アカウント削除に失敗しました", 500);
+  await logSecurityEvent({
+    eventType: "account_deleted_by_owner",
+    severity: "warn",
+    actorUserId: user.id,
+    target: user.email
+  });
 
   return jsonOk({ ok: true });
 }

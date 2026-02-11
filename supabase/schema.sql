@@ -107,6 +107,35 @@ create table if not exists announcements (
   created_at timestamptz not null default now()
 );
 
+create table if not exists user_account_controls (
+  user_id uuid primary key,
+  is_suspended boolean not null default false,
+  suspend_reason text null,
+  suspended_at timestamptz null,
+  suspended_by uuid null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists contact_inquiries (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null,
+  email text not null,
+  subject text not null check (char_length(subject) between 3 and 120),
+  message text not null check (char_length(message) between 10 and 4000),
+  created_at timestamptz not null default now()
+);
+
+create table if not exists security_events (
+  id uuid primary key default gen_random_uuid(),
+  actor_user_id uuid null,
+  event_type text not null,
+  severity text not null default 'info' check (severity in ('info', 'warn', 'error')),
+  target text null,
+  detail jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+
 create index if not exists idx_members_active_joined on members(is_active, joined_at);
 create index if not exists idx_member_links_member_id on member_links(member_id);
 create index if not exists idx_reactions_member_created on reactions(member_id, created_at);
@@ -115,6 +144,10 @@ create index if not exists idx_link_reactions_link_created on link_reactions(mem
 create index if not exists idx_link_reactions_reacted_on on link_reactions(reacted_on);
 create index if not exists idx_applications_batch_status on audition_applications(batch_id, status);
 create index if not exists idx_announcements_scope_created on announcements(scope, created_at);
+create index if not exists idx_user_account_controls_suspended on user_account_controls(is_suspended, updated_at);
+create index if not exists idx_contact_inquiries_created_at on contact_inquiries(created_at desc);
+create index if not exists idx_security_events_created_at on security_events(created_at desc);
+create index if not exists idx_security_events_event on security_events(event_type, created_at desc);
 
 create or replace view view_member_reactions_all
 with (security_invoker = true) as
@@ -176,6 +209,9 @@ alter table audition_applications enable row level security;
 alter table assets enable row level security;
 alter table lessons_ae enable row level security;
 alter table announcements enable row level security;
+alter table user_account_controls enable row level security;
+alter table contact_inquiries enable row level security;
+alter table security_events enable row level security;
 
 drop policy if exists members_public_select on members;
 drop policy if exists member_links_public_select on member_links;

@@ -28,6 +28,23 @@ export default function AccountPage() {
         router.push("/auth/login");
         return;
       }
+      const {
+        data: { session }
+      } = await supabase.auth.getSession();
+      if (session?.access_token) {
+        const statusRes = await fetch("/api/me/status", {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+          credentials: "same-origin"
+        });
+        if (statusRes.ok) {
+          const statusData = (await statusRes.json()) as { suspended?: boolean };
+          if (statusData.suspended) {
+            await supabase.auth.signOut();
+            router.replace("/auth/login?blocked=1");
+            return;
+          }
+        }
+      }
       setEmail(user.email);
       setLoading(false);
     }

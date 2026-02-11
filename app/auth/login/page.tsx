@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 
 export default function LoginPage() {
@@ -11,6 +11,13 @@ export default function LoginPage() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("blocked") === "1") {
+      setError("このアカウントは現在停止中です。運営へお問い合わせください。");
+    }
+  }, []);
 
   async function syncAdminSession(token?: string) {
     if (!token) return;
@@ -41,6 +48,20 @@ export default function LoginPage() {
       return;
     }
 
+    const statusRes = await fetch("/api/me/status", {
+      headers: { Authorization: `Bearer ${data.session?.access_token || ""}` },
+      credentials: "same-origin"
+    });
+    if (statusRes.ok) {
+      const statusData = (await statusRes.json()) as { suspended?: boolean };
+      if (statusData.suspended) {
+        await supabase.auth.signOut();
+        setError("このアカウントは現在停止中です。運営へお問い合わせください。");
+        setLoading(false);
+        return;
+      }
+    }
+
     const accessToken = data.session?.access_token;
     if (email.toLowerCase() === adminEmail && accessToken) {
       try {
@@ -52,7 +73,7 @@ export default function LoginPage() {
       }
     }
 
-    router.replace("/account");
+    router.replace("/");
   }
 
   return (

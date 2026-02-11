@@ -101,7 +101,7 @@ export default function RegisterPage() {
       syncAdminSession(accessToken);
     }
 
-    router.replace("/account");
+    router.replace("/");
   }
 
   async function resendConfirmation() {

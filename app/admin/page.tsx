@@ -7,11 +7,10 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminDashboardPage() {
   const batch = await getCurrentBatch();
-  const { count } = await supabaseAdmin
-    .from("audition_applications")
-    .select("*", { count: "exact", head: true })
-    .eq("batch_id", batch.id)
-    .eq("status", "pending");
+  const [{ count: pendingCount }, { count: inquiryCount }] = await Promise.all([
+    supabaseAdmin.from("audition_applications").select("*", { count: "exact", head: true }).eq("batch_id", batch.id).eq("status", "pending"),
+    supabaseAdmin.from("contact_inquiries").select("*", { count: "exact", head: true })
+  ]);
 
   return (
     <div className="stack">
@@ -30,7 +29,7 @@ export default async function AdminDashboardPage() {
       <section className="grid grid-2">
         <article className="card stack">
           <h2>未処理申請</h2>
-          <p style={{ fontSize: "2rem", margin: 0 }}>{count || 0}</p>
+          <p style={{ fontSize: "2rem", margin: 0 }}>{pendingCount || 0}</p>
         </article>
         <article className="card stack">
           <h2>現在バッチ</h2>
@@ -42,6 +41,13 @@ export default async function AdminDashboardPage() {
           <p className="meta">公開状態: {batch.published_at ? "公開済み" : "未公開"}</p>
           <Link href="/admin/auditions" className="btn primary">
             審査へ
+          </Link>
+        </article>
+        <article className="card stack">
+          <h2>未対応お問い合わせ</h2>
+          <p style={{ fontSize: "2rem", margin: 0 }}>{inquiryCount || 0}</p>
+          <Link href="/admin/inquiries" className="btn">
+            お問い合わせ管理へ
           </Link>
         </article>
       </section>

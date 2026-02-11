@@ -5,6 +5,7 @@ import { getCurrentBatch } from "@/lib/auditions";
 import { supabaseAdmin } from "@/lib/supabase";
 import { isValidUrl, makeApplicationCode, safeStringArray, safeText } from "@/lib/utils";
 import { hasSameOrigin } from "@/lib/security";
+import { getSuspensionState } from "@/lib/user-access";
 
 export async function GET(req: NextRequest) {
   const rate = applyRateLimit(req.headers, "audition_apply_meta", 120, 60_000);
@@ -44,6 +45,8 @@ export async function POST(req: NextRequest) {
     error: authError
   } = await supabaseAdmin.auth.getUser(token);
   if (authError || !user) return jsonError("認証が無効です。再ログインしてください", 401);
+  const suspension = await getSuspensionState(user.id);
+  if (suspension.suspended) return jsonError("このアカウントは停止中のため申請できません", 403);
 
   const body = (await req.json().catch(() => null)) as
     | {

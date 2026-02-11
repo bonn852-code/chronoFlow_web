@@ -5,6 +5,8 @@ import { setAdminCookie, clearAdminCookie } from "@/lib/admin-auth";
 import { supabaseAdmin } from "@/lib/supabase";
 import { hasSameOrigin } from "@/lib/security";
 import { applyRateLimit } from "@/lib/rate-limit";
+import { getSuspensionState } from "@/lib/user-access";
+import { logSecurityEvent } from "@/lib/security-events";
 
 export async function POST(req: NextRequest) {
   if (!hasSameOrigin(req)) return jsonError("Forbidden", 403);
@@ -32,7 +34,24 @@ export async function POST(req: NextRequest) {
     await clearAdminCookie();
     return jsonError("管理者権限がありません", 403);
   }
+  const suspension = await getSuspensionState(user.id);
+  if (suspension.suspended) {
+    await clearAdminCookie();
+    await logSecurityEvent({
+      eventType: "admin_session_denied_suspended",
+      severity: "warn",
+      actorUserId: user.id,
+      target: user.email
+    });
+    return jsonError("停止中アカウントは管理操作できません", 403);
+  }
 
   await setAdminCookie();
+  await logSecurityEvent({
+    eventType: "admin_session_synced",
+    severity: "info",
+    actorUserId: user.id,
+    target: user.email
+  });
   return jsonOk({ ok: true });
 }

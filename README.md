@@ -66,6 +66,7 @@ npm run dev
 - `/auth/login`
 - `/auth/register`
 - `/account`
+- `/contact`
 
 ### Member Portal
 
@@ -80,6 +81,9 @@ npm run dev
 - `/admin/assets`
 - `/admin/learn/ae`
 - `/admin/announcements`
+- `/admin/users`
+- `/admin/inquiries`
+- `/admin/security`
 
 ## Security (Free-tier scope)
 
@@ -87,6 +91,7 @@ npm run dev
 - Admin email固定: `ADMIN_EMAIL` / `NEXT_PUBLIC_ADMIN_EMAIL`
 - Admin login concealment: optional `ADMIN_LOGIN_KEY` (access via `/admin/login?k=...`)
 - `bonnedits852@gmail.com` で通常ログインすると管理アクセスが有効化
+- 停止済みアカウントはログイン後も操作不可（申請/問い合わせ/退会などをAPI側で拒否）
 - `admin/password` ログインは既定で無効（`ENABLE_ADMIN_PASSWORD_LOGIN=false`）
 - Middleware guard: `/admin/*` and `/api/admin/*`
 - Hardening headers: `CSP`, `HSTS(prod)`, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, `COOP`, `CORP`
@@ -97,6 +102,16 @@ npm run dev
   - `/api/admin/login`
 - Reaction abuse control: `member_id + device_id + reacted_on` unique
 - Member announcements API scope guard (`portalToken` required for members scope)
+
+## 運用ログ監視と定期監査
+
+- 管理画面 `/admin/security` で直近のセキュリティイベントを確認できます
+- 監査用の主要イベントは `security_events` テーブルに保存されます
+- 定期監査（推奨: 週1）:
+  - 停止/削除したアカウントの妥当性確認
+  - お問い合わせ未対応件数の確認
+  - Supabase Security Advisor と Vercel Logs の警告確認
+  - 依存関係更新（`npm audit`, Next.js更新）の確認
 
 ## Notes
 
