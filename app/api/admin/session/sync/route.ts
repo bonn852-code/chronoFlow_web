@@ -3,13 +3,11 @@ import { env } from "@/lib/env";
 import { jsonError, jsonOk } from "@/lib/http";
 import { setAdminCookie, clearAdminCookie } from "@/lib/admin-auth";
 import { supabaseAdmin } from "@/lib/supabase";
-import { hasSameOrigin } from "@/lib/security";
 import { applyRateLimit } from "@/lib/rate-limit";
 import { getSuspensionState } from "@/lib/user-access";
 import { logSecurityEvent } from "@/lib/security-events";
 
 export async function POST(req: NextRequest) {
-  if (!hasSameOrigin(req)) return jsonError("Forbidden", 403);
   const rate = applyRateLimit(req.headers, "admin_session_sync", 120, 60_000);
   if (!rate.allowed) return jsonError("試行回数が多すぎます", 429, { retryAfter: rate.retryAfterSeconds });
 

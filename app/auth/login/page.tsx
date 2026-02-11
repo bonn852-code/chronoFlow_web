@@ -47,6 +47,15 @@ export default function LoginPage() {
     return false;
   }
 
+  async function ensureAdminSessionWithRefresh(initialToken?: string) {
+    const ok = await ensureAdminSession(initialToken);
+    if (ok) return true;
+    const refreshed = await supabase.auth.refreshSession();
+    const retryToken = refreshed.data.session?.access_token;
+    if (!retryToken) return false;
+    return ensureAdminSession(retryToken);
+  }
+
   function nextPath() {
     if (typeof window === "undefined") return "/";
     const raw = new URLSearchParams(window.location.search).get("next") || "/";
@@ -106,7 +115,7 @@ export default function LoginPage() {
     const target = nextPath();
     const needsAdmin = target.startsWith("/admin");
     if (email.toLowerCase() === adminEmail && accessToken) {
-      const synced = await ensureAdminSession(accessToken);
+      const synced = await ensureAdminSessionWithRefresh(accessToken);
       if (!synced) {
         if (needsAdmin) {
           setError("管理者セッションの同期に失敗しました。再度ログインしてください。");
@@ -137,13 +146,13 @@ export default function LoginPage() {
           router.replace("/" as never);
           return;
         }
-        const synced = await ensureAdminSession(data.session.access_token);
+        const synced = await ensureAdminSessionWithRefresh(data.session.access_token);
         if (!synced) {
           setError("管理者セッションの同期に失敗しました。もう一度ログインしてください。");
           return;
         }
       } else if (email === adminEmail) {
-        await ensureAdminSession(data.session.access_token).catch(() => undefined);
+        await ensureAdminSessionWithRefresh(data.session.access_token).catch(() => undefined);
       }
       router.replace(target as never);
     });
