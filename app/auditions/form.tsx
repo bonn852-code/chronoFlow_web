@@ -5,12 +5,13 @@ import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 
 export default function AuditionForm() {
   const supabase = createSupabaseBrowserClient();
-  const adviceCodeStorageKey = "cf_latest_advice_code";
+  const adviceCodeStoragePrefix = "cf_latest_advice_code";
   const [applicationCode, setApplicationCode] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [isOpen, setIsOpen] = useState<boolean | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+  const [viewerUserId, setViewerUserId] = useState<string | null>(null);
   const [periodText, setPeriodText] = useState<string>("");
 
   useEffect(() => {
@@ -31,23 +32,37 @@ export default function AuditionForm() {
   }, []);
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(adviceCodeStorageKey);
-      if (saved) setApplicationCode(saved);
-    } catch {
-      // noop
-    }
-  }, []);
-
-  useEffect(() => {
     let mounted = true;
     supabase.auth.getSession().then(({ data }) => {
-      if (mounted) setIsLoggedIn(Boolean(data.session));
+      if (!mounted) return;
+      setIsLoggedIn(Boolean(data.session));
+      setViewerUserId(data.session?.user.id ?? null);
+      if (data.session?.user.id) {
+        try {
+          const saved = localStorage.getItem(`${adviceCodeStoragePrefix}:${data.session.user.id}`);
+          setApplicationCode(saved || null);
+        } catch {
+          setApplicationCode(null);
+        }
+      } else {
+        setApplicationCode(null);
+      }
     });
     const {
       data: { subscription }
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setIsLoggedIn(Boolean(session));
+      setViewerUserId(session?.user.id ?? null);
+      if (session?.user.id) {
+        try {
+          const saved = localStorage.getItem(`${adviceCodeStoragePrefix}:${session.user.id}`);
+          setApplicationCode(saved || null);
+        } catch {
+          setApplicationCode(null);
+        }
+      } else {
+        setApplicationCode(null);
+      }
     });
     return () => {
       mounted = false;
@@ -105,13 +120,19 @@ export default function AuditionForm() {
       setApplicationCode(data.applicationCode || null);
       if (data.applicationCode) {
         try {
-          localStorage.setItem(adviceCodeStorageKey, data.applicationCode);
+          const userId = session?.user?.id || viewerUserId;
+          if (userId) {
+            localStorage.setItem(`${adviceCodeStoragePrefix}:${userId}`, data.applicationCode);
+          }
         } catch {
           // noop
         }
       } else {
         try {
-          localStorage.removeItem(adviceCodeStorageKey);
+          const userId = session?.user?.id || viewerUserId;
+          if (userId) {
+            localStorage.removeItem(`${adviceCodeStoragePrefix}:${userId}`);
+          }
         } catch {
           // noop
         }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 
 type AdviceResponse = {
   displayName: string;
@@ -10,11 +11,13 @@ type AdviceResponse = {
 };
 
 export default function AuditionAdvicePage() {
-  const adviceCodeStorageKey = "cf_latest_advice_code";
+  const supabase = createSupabaseBrowserClient();
+  const adviceCodeStoragePrefix = "cf_latest_advice_code";
   const [result, setResult] = useState<AdviceResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [codeInput, setCodeInput] = useState("");
+  const [viewerUserId, setViewerUserId] = useState<string | null>(null);
 
   const toStatusLabel = (status: AdviceResponse["status"]) => {
     if (status === "approved") return "合格";
@@ -43,7 +46,9 @@ export default function AuditionAdvicePage() {
 
       setResult(data);
       try {
-        localStorage.setItem(adviceCodeStorageKey, applicationCode);
+        if (viewerUserId) {
+          localStorage.setItem(`${adviceCodeStoragePrefix}:${viewerUserId}`, applicationCode);
+        }
       } catch {
         // noop
       }
@@ -63,19 +68,31 @@ export default function AuditionAdvicePage() {
   }
 
   useEffect(() => {
-    const url = new URL(window.location.href);
-    const codeFromQuery = (url.searchParams.get("code") || "").trim();
-    let fallbackCode = "";
-    try {
-      fallbackCode = (localStorage.getItem(adviceCodeStorageKey) || "").trim();
-    } catch {
-      // noop
-    }
-    const code = codeFromQuery || fallbackCode;
-    if (!code) return;
-    setCodeInput(code);
-    void lookup(code);
-  }, []);
+    let mounted = true;
+    supabase.auth.getSession().then(({ data }) => {
+      if (!mounted) return;
+      const userId = data.session?.user.id ?? null;
+      setViewerUserId(userId);
+
+      const url = new URL(window.location.href);
+      const codeFromQuery = (url.searchParams.get("code") || "").trim();
+      let fallbackCode = "";
+      if (userId) {
+        try {
+          fallbackCode = (localStorage.getItem(`${adviceCodeStoragePrefix}:${userId}`) || "").trim();
+        } catch {
+          // noop
+        }
+      }
+      const code = codeFromQuery || fallbackCode;
+      if (!code) return;
+      setCodeInput(code);
+      void lookup(code);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, [supabase.auth]);
 
   return (
     <section className="card stack">
