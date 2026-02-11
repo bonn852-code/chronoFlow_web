@@ -73,15 +73,25 @@ export default function RegisterPage() {
         emailRedirectTo: `${window.location.origin}/auth/login`
       }
     });
-    if (signUpError) {
-      setError("新規登録に失敗しました。入力内容を確認してください。");
+
+    // Supabase側で user が返っている場合は、エラー文字列があっても確認メール送信済みとして扱う
+    if (data.user && !data.session) {
+      setConfirmEmail(email);
+      setMessage("確認メールを送信しました。メール内のURLを開いて登録を完了してください。");
       endSubmit();
       return;
     }
 
-    if (data.user && !data.session) {
-      setConfirmEmail(email);
-      setMessage("確認メールを送信しました。メール内のURLを開いて登録を完了してください。");
+    if (signUpError) {
+      const msg = signUpError.message || "";
+      if (/already registered|already exists|user already/i.test(msg)) {
+        setConfirmEmail(email);
+        setMessage("このメールアドレスは登録済みです。確認が未完了の場合は下の「確認メールを再送」を押してください。");
+      } else if (/rate limit|too many requests/i.test(msg)) {
+        setError("短時間に操作が集中しています。30秒ほど待ってから再試行してください。");
+      } else {
+        setError("新規登録に失敗しました。入力内容を確認してください。");
+      }
       endSubmit();
       return;
     }
