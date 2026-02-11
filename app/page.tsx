@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getLatestPublicAnnouncements, getMembers } from "@/lib/queries";
 import { MemberCard } from "@/components/member-card";
+import { GuestRegisterCta } from "@/components/guest-register-cta";
 
 export const revalidate = 120;
 export const dynamic = "force-dynamic";
@@ -13,6 +14,7 @@ export default async function HomePage() {
       <section className="hero section">
         <h1>ChronoFlow 公式サイト</h1>
         <p>メンバー活動、審査、学習、配布を一つにまとめたミニマルな運用サイト。</p>
+        <GuestRegisterCta />
       </section>
 
       <section className="section">

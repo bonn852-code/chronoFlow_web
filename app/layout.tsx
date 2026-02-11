@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { env } from "@/lib/env";
 import { SiteNav } from "@/components/site-nav";
+import { AccountFabLink } from "@/components/account-fab-link";
 
 export const metadata: Metadata = {
   title: `${env.siteName} Web`,
@@ -26,9 +27,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 className="brand-logo"
               />
             </Link>
-            <Link href="/account" className="account-fab" aria-label="アカウント">
-              A
-            </Link>
+            <AccountFabLink />
             <SiteNav />
           </div>
         </header>
