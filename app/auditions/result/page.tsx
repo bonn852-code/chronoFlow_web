@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { getAuditionBatchesPaged } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
@@ -12,6 +13,9 @@ export default async function AuditionResultPage({
   const page = Math.max(1, Number(params.page || 1) || 1);
   const { batches, total, pageSize } = await getAuditionBatchesPaged(page, 7, true);
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  if (page > totalPages) {
+    redirect(`/auditions/result?page=${totalPages}`);
+  }
 
   return (
     <div className="stack">

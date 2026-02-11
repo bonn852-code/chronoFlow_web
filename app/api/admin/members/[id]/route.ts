@@ -3,10 +3,12 @@ import { randomUUID } from "node:crypto";
 import { checkAdminRequest } from "@/lib/api-auth";
 import { jsonError, jsonOk } from "@/lib/http";
 import { supabaseAdmin } from "@/lib/supabase";
+import { isUuid } from "@/lib/utils";
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   if (!checkAdminRequest(req)) return jsonError("Unauthorized", 401);
   const { id } = await params;
+  if (!isUuid(id)) return jsonError("IDが不正です", 400);
   const permanent = req.nextUrl.searchParams.get("permanent") === "1";
 
   if (permanent) {
@@ -31,6 +33,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   if (!checkAdminRequest(req)) return jsonError("Unauthorized", 401);
   const { id } = await params;
+  if (!isUuid(id)) return jsonError("IDが不正です", 400);
   const body = (await req.json().catch(() => null)) as
     | {
         regeneratePortal?: boolean;

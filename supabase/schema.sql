@@ -178,55 +178,14 @@ alter table lessons_ae enable row level security;
 alter table announcements enable row level security;
 
 drop policy if exists members_public_select on members;
-create policy members_public_select on members
-for select using (is_active = true);
-
 drop policy if exists member_links_public_select on member_links;
-create policy member_links_public_select on member_links
-for select using (true);
-
 drop policy if exists reactions_public_insert on reactions;
-create policy reactions_public_insert on reactions
-for insert with check (
-  exists (
-    select 1
-    from members
-    where members.id = reactions.member_id
-      and members.is_active = true
-  )
-);
-
 drop policy if exists reactions_public_select on reactions;
-create policy reactions_public_select on reactions
-for select using (true);
-
 drop policy if exists link_reactions_public_insert on link_reactions;
-create policy link_reactions_public_insert on link_reactions
-for insert with check (
-  exists (
-    select 1
-    from member_links ml
-    join members m on m.id = ml.member_id
-    where ml.id = link_reactions.member_link_id
-      and m.is_active = true
-  )
-);
-
 drop policy if exists link_reactions_public_select on link_reactions;
-create policy link_reactions_public_select on link_reactions
-for select using (true);
-
 drop policy if exists lessons_public_select on lessons_ae;
-create policy lessons_public_select on lessons_ae
-for select using (true);
-
 drop policy if exists announcements_public_select on announcements;
-create policy announcements_public_select on announcements
-for select using (scope = 'public');
-
 drop policy if exists auditions_public_insert on audition_applications;
-create policy auditions_public_insert on audition_applications
-for insert with check (
-  status = 'pending'
-  and consent_public_profile = true
-);
+
+-- Hardened mode: no public RLS policies.
+-- All reads/writes are expected to go through server-side APIs using Service Role.

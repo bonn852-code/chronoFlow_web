@@ -18,7 +18,7 @@ function needsAdmin(pathname: string): boolean {
   return ADMIN_PATHS.some((prefix) => pathname.startsWith(prefix));
 }
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const method = req.method.toUpperCase();
 

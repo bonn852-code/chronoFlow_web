@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { randomBytes } from "node:crypto";
 
 export function isValidUrl(url: string): boolean {
   try {
@@ -31,8 +31,18 @@ export function safeStringArray(value: unknown, max = 10): string[] {
     .slice(0, max);
 }
 
+export function isUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
 export function makeApplicationCode(): string {
-  return randomUUID().slice(0, 8).toUpperCase();
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const bytes = randomBytes(12);
+  let out = "";
+  for (let i = 0; i < 12; i += 1) {
+    out += alphabet[bytes[i] % alphabet.length];
+  }
+  return out;
 }
 
 export function platformFromUrl(url: string): "youtube" | "tiktok" | "instagram" | "other" {

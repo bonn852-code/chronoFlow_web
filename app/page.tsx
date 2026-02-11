@@ -1,13 +1,26 @@
 import Link from "next/link";
-import { getLatestPublicAnnouncements, getMembers } from "@/lib/queries";
+import { redirect } from "next/navigation";
+import { getMembersPaged, getPublicAnnouncementsPaged } from "@/lib/queries";
 import { MemberCard } from "@/components/member-card";
 import { GuestRegisterCta } from "@/components/guest-register-cta";
 
 export const revalidate = 120;
 export const dynamic = "force-dynamic";
 
-export default async function HomePage() {
-  const [announcements, members] = await Promise.all([getLatestPublicAnnouncements(6), getMembers("", 6)]);
+export default async function HomePage({
+  searchParams
+}: {
+  searchParams?: Promise<{ annPage?: string; memberPage?: string }>;
+}) {
+  const params = (await searchParams) || {};
+  const annPage = Math.max(1, Number(params.annPage || 1) || 1);
+  const memberPage = Math.max(1, Number(params.memberPage || 1) || 1);
+  const [annPageData, memberPageData] = await Promise.all([getPublicAnnouncementsPaged(annPage, 3), getMembersPaged("", memberPage, 3)]);
+  const annTotalPages = Math.max(1, Math.ceil(annPageData.total / annPageData.pageSize));
+  const memberTotalPages = Math.max(1, Math.ceil(memberPageData.total / memberPageData.pageSize));
+  if (annPage > annTotalPages || memberPage > memberTotalPages) {
+    redirect(`/?annPage=${Math.min(annPage, annTotalPages)}&memberPage=${Math.min(memberPage, memberTotalPages)}`);
+  }
 
   return (
     <div className="stack">
@@ -22,8 +35,8 @@ export default async function HomePage() {
           <h2>報告・お知らせ</h2>
         </div>
         <article className="card stack">
-          {!announcements.length ? <p className="meta">お知らせはまだありません</p> : null}
-          {announcements.map((ann) => (
+          {!annPageData.announcements.length ? <p className="meta">お知らせはまだありません</p> : null}
+          {annPageData.announcements.map((ann) => (
             <div key={ann.id} className="stack">
               <strong>{ann.title}</strong>
               <p className="meta">{new Date(ann.created_at).toLocaleDateString("ja-JP")}</p>
@@ -31,6 +44,29 @@ export default async function HomePage() {
             </div>
           ))}
         </article>
+        <section className="split">
+          {annPage > 1 ? (
+            <Link href={`/?annPage=${annPage - 1}&memberPage=${memberPage}`} className="btn">
+              前へ
+            </Link>
+          ) : (
+            <button className="btn" type="button" disabled>
+              前へ
+            </button>
+          )}
+          <span className="meta">
+            お知らせ {annPage} / {annTotalPages}
+          </span>
+          {annPage < annTotalPages ? (
+            <Link href={`/?annPage=${annPage + 1}&memberPage=${memberPage}`} className="btn">
+              次へ
+            </Link>
+          ) : (
+            <button className="btn" type="button" disabled>
+              次へ
+            </button>
+          )}
+        </section>
       </section>
 
       <section className="section">
@@ -46,7 +82,7 @@ export default async function HomePage() {
           </div>
         </div>
         <div className="grid home-members-grid">
-          {members.map((m) => (
+          {memberPageData.members.map((m) => (
             <MemberCard
               key={m.id}
               id={m.id}
@@ -58,6 +94,29 @@ export default async function HomePage() {
             />
           ))}
         </div>
+        <section className="split">
+          {memberPage > 1 ? (
+            <Link href={`/?memberPage=${memberPage - 1}&annPage=${annPage}`} className="btn">
+              前へ
+            </Link>
+          ) : (
+            <button className="btn" type="button" disabled>
+              前へ
+            </button>
+          )}
+          <span className="meta">
+            メンバー {memberPage} / {memberTotalPages}
+          </span>
+          {memberPage < memberTotalPages ? (
+            <Link href={`/?memberPage=${memberPage + 1}&annPage=${annPage}`} className="btn">
+              次へ
+            </Link>
+          ) : (
+            <button className="btn" type="button" disabled>
+              次へ
+            </button>
+          )}
+        </section>
       </section>
     </div>
   );

@@ -1,10 +1,15 @@
 import { supabaseAdmin } from "@/lib/supabase";
 
+function buildBatchTitle(date = new Date()) {
+  return `${date.getFullYear()} ${date.toLocaleString("en-US", { month: "short" })} Audition`;
+}
+
 export async function getCurrentBatch() {
   const { data, error } = await supabaseAdmin
     .from("audition_batches")
     .select("id,title,apply_open_at,apply_close_at,created_at,published_at")
     .is("deleted_at", null)
+    .is("published_at", null)
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -13,9 +18,7 @@ export async function getCurrentBatch() {
 
   if (data) return data;
 
-  const title = `${new Date().getFullYear()} ${new Date().toLocaleString("en-US", {
-    month: "short"
-  })} Audition`;
+  const title = buildBatchTitle();
   const now = new Date();
   const close = new Date(now);
   close.setDate(close.getDate() + 30);
@@ -27,4 +30,21 @@ export async function getCurrentBatch() {
 
   if (createErr) throw createErr;
   return created;
+}
+
+export async function createNextBatch() {
+  const now = new Date();
+  const close = new Date(now);
+  close.setDate(close.getDate() + 30);
+  const { data, error } = await supabaseAdmin
+    .from("audition_batches")
+    .insert({
+      title: buildBatchTitle(now),
+      apply_open_at: now.toISOString(),
+      apply_close_at: close.toISOString()
+    })
+    .select("id,title,apply_open_at,apply_close_at,created_at,published_at")
+    .single();
+  if (error) throw error;
+  return data;
 }

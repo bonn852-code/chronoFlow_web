@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { getMembersPaged } from "@/lib/queries";
 import { MemberCard } from "@/components/member-card";
 
@@ -16,6 +17,9 @@ export default async function MembersPage({
   const pageSize = 7;
   const { members, total } = await getMembersPaged(query, page, pageSize);
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  if (page > totalPages) {
+    redirect(`/members?query=${encodeURIComponent(query)}&page=${totalPages}`);
+  }
 
   return (
     <div className="stack">

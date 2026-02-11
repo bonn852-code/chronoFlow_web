@@ -3,10 +3,10 @@ import { applyRateLimit } from "@/lib/rate-limit";
 import { jsonError, jsonOk } from "@/lib/http";
 import { supabaseAdmin, supabasePublic } from "@/lib/supabase";
 import { safeText } from "@/lib/utils";
+import { hasSameOrigin } from "@/lib/security";
 
 export async function POST(req: NextRequest) {
-  const origin = req.headers.get("origin");
-  if (!origin || origin !== req.nextUrl.origin) return jsonError("Forbidden", 403);
+  if (!hasSameOrigin(req)) return jsonError("Forbidden", 403);
 
   const rate = applyRateLimit(req.headers, "account_delete", 10, 60_000);
   if (!rate.allowed) return jsonError("試行回数が多すぎます", 429);
@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
   if (!token) return jsonError("認証が必要です", 401);
 
   const body = (await req.json().catch(() => null)) as { password?: string } | null;
-  const password = safeText(body?.password, 8, 200);
+  const password = safeText(body?.password, 10, 200);
   if (!password) return jsonError("パスワードを入力してください", 400);
 
   const {

@@ -4,8 +4,12 @@ import { jsonError, jsonOk } from "@/lib/http";
 import { getCurrentBatch } from "@/lib/auditions";
 import { supabaseAdmin } from "@/lib/supabase";
 import { isValidUrl, makeApplicationCode, safeStringArray, safeText } from "@/lib/utils";
+import { hasSameOrigin } from "@/lib/security";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const rate = applyRateLimit(req.headers, "audition_apply_meta", 120, 60_000);
+  if (!rate.allowed) return jsonError("アクセスが多すぎます", 429, { retryAfter: rate.retryAfterSeconds });
+
   try {
     const batch = await getCurrentBatch();
     const now = Date.now();
@@ -27,8 +31,7 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const origin = req.headers.get("origin");
-  if (!origin || origin !== req.nextUrl.origin) return jsonError("Forbidden", 403);
+  if (!hasSameOrigin(req)) return jsonError("Forbidden", 403);
 
   const rate = applyRateLimit(req.headers, "audition_apply", 15, 60_000);
   if (!rate.allowed) return jsonError("送信回数が多すぎます", 429, { retryAfter: rate.retryAfterSeconds });
@@ -90,7 +93,7 @@ export async function POST(req: NextRequest) {
       return jsonError("申請の保存に失敗しました", 500);
     }
 
-    return jsonOk({ applicationCode });
+    return jsonOk({ applicationCode: consentAdvice ? applicationCode : null });
   } catch {
     return jsonError("申請処理に失敗しました", 500);
   }

@@ -1,14 +1,26 @@
 import { jsonError, jsonOk } from "@/lib/http";
-import { getCurrentBatch } from "@/lib/auditions";
 import { supabaseAdmin } from "@/lib/supabase";
+import { applyRateLimit } from "@/lib/rate-limit";
+import { NextRequest } from "next/server";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const rate = applyRateLimit(req.headers, "audition_results", 120, 60_000);
+  if (!rate.allowed) return jsonError("アクセスが多すぎます", 429, { retryAfter: rate.retryAfterSeconds });
+
   try {
-    const batch = await getCurrentBatch();
-    if (!batch.published_at) {
+    const { data: batch, error: batchErr } = await supabaseAdmin
+      .from("audition_batches")
+      .select("id,title,published_at")
+      .is("deleted_at", null)
+      .not("published_at", "is", null)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (batchErr) return jsonError("結果一覧の取得に失敗しました", 500);
+    if (!batch) {
       return jsonOk({
         batch: {
-          title: batch.title,
+          title: "",
           publishedAt: null
         },
         results: []

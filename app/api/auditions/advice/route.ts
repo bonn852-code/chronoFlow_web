@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
 
   const body = (await req.json().catch(() => null)) as { applicationCode?: string } | null;
   const code = safeText(body?.applicationCode, 6, 40);
-  if (!code) return jsonError("申請コードが不正です", 400);
+  if (!code || !/^[A-Z0-9]{8,16}$/.test(code.toUpperCase())) return jsonError("申請コードが不正です", 400);
 
   const { data, error } = await supabaseAdmin
     .from("audition_applications")

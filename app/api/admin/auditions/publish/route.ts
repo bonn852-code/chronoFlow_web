@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { randomUUID } from "node:crypto";
 import { checkAdminRequest } from "@/lib/api-auth";
-import { getCurrentBatch } from "@/lib/auditions";
+import { createNextBatch, getCurrentBatch } from "@/lib/auditions";
 import { jsonError, jsonOk } from "@/lib/http";
 import { supabaseAdmin } from "@/lib/supabase";
 
@@ -54,7 +54,9 @@ export async function POST(req: NextRequest) {
 
     if (publishErr) return jsonError("結果発表に失敗しました", 500);
 
-    return jsonOk({ ok: true, publishedCount: approvedIds.length });
+    await createNextBatch();
+
+    return jsonOk({ ok: true, publishedCount: approvedIds.length, nextBatchCreated: true });
   } catch {
     return jsonError("結果発表に失敗しました", 500);
   }

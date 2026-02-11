@@ -14,11 +14,17 @@ type ResultItem = {
 
 export default async function BatchResultDetailPage({ params }: { params: Promise<{ batchId: string }> }) {
   const { batchId } = await params;
+  const toStatusLabel = (status: ResultItem["status"]) => {
+    if (status === "approved") return "合格";
+    if (status === "rejected") return "不合格";
+    return "審査中";
+  };
 
   const { data: batch, error: batchErr } = await supabaseAdmin
     .from("audition_batches")
     .select("id,title,apply_open_at,apply_close_at,published_at,created_at")
     .eq("id", batchId)
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (batchErr) {
@@ -26,7 +32,11 @@ export default async function BatchResultDetailPage({ params }: { params: Promis
   }
   if (!batch) notFound();
 
-  const { count, error: countErr } = await supabaseAdmin.from("audition_batches").select("*", { count: "exact", head: true });
+  const { count, error: countErr } = await supabaseAdmin
+    .from("audition_batches")
+    .select("*", { count: "exact", head: true })
+    .is("deleted_at", null)
+    .not("published_at", "is", null);
   if (countErr) {
     return <section className="card">読み込みに失敗しました。</section>;
   }
@@ -34,6 +44,8 @@ export default async function BatchResultDetailPage({ params }: { params: Promis
   const { data: ordered, error: orderErr } = await supabaseAdmin
     .from("audition_batches")
     .select("id")
+    .is("deleted_at", null)
+    .not("published_at", "is", null)
     .order("created_at", { ascending: false });
 
   if (orderErr) {
@@ -76,7 +88,7 @@ export default async function BatchResultDetailPage({ params }: { params: Promis
             {(data as ResultItem[]).map((item) => (
               <tr key={item.id}>
                 <td>{item.display_name}</td>
-                <td>{item.status}</td>
+                <td>{toStatusLabel(item.status)}</td>
                 <td>{new Date(item.created_at).toLocaleString("ja-JP")}</td>
                 <td>{item.reviewed_at ? new Date(item.reviewed_at).toLocaleString("ja-JP") : "-"}</td>
               </tr>

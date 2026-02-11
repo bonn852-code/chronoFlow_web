@@ -1,8 +1,15 @@
 import { jsonError, jsonOk } from "@/lib/http";
 import { supabaseAdmin } from "@/lib/supabase";
+import { applyRateLimit } from "@/lib/rate-limit";
+import { isUuid } from "@/lib/utils";
+import { NextRequest } from "next/server";
 
-export async function GET(_: Request, { params }: { params: Promise<{ token: string }> }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
+  const rate = applyRateLimit(req.headers, "portal", 80, 60_000);
+  if (!rate.allowed) return jsonError("アクセスが多すぎます", 429, { retryAfter: rate.retryAfterSeconds });
+
   const { token } = await params;
+  if (!isUuid(token)) return jsonError("無効なトークンです", 400);
   const { data: member, error: memberErr } = await supabaseAdmin
     .from("members")
     .select("id,display_name,portal_token,is_active")

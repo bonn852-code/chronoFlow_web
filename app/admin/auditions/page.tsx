@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { AdminNav } from "@/components/admin-nav";
@@ -39,8 +39,15 @@ export default function AdminAuditionsPage() {
   const [pageSize, setPageSize] = useState(7);
   const [openAt, setOpenAt] = useState("");
   const [closeAt, setCloseAt] = useState("");
+  const latestLoadId = useRef(0);
+  const toStatusLabel = (status: Application["status"]) => {
+    if (status === "approved") return "合格";
+    if (status === "rejected") return "不合格";
+    return "審査中";
+  };
 
   const load = useCallback(async () => {
+    const loadId = ++latestLoadId.current;
     const ts = Date.now();
     const res = await fetch(`/api/admin/auditions?page=${page}&pageSize=${pageSize}&ts=${ts}`, {
       cache: "no-store",
@@ -58,6 +65,7 @@ export default function AdminAuditionsPage() {
       setMessage(data.error || "取得失敗");
       return;
     }
+    if (loadId !== latestLoadId.current) return;
     setItems(data.applications || []);
     setBatches(data.batches || []);
     setTotal(data.total || 0);
@@ -227,7 +235,7 @@ export default function AdminAuditionsPage() {
                   <div className="stack">
                     <strong>{item.display_name}</strong>
                     <span className="meta">{new Date(item.created_at).toLocaleString("ja-JP")}</span>
-                    <span className="meta">code: {item.application_code}</span>
+                    <span className="meta">code: {item.consent_advice ? item.application_code : "なし"}</span>
                   </div>
                 </td>
                 <td>
@@ -240,7 +248,7 @@ export default function AdminAuditionsPage() {
                   <br />
                   advice: {item.consent_advice ? "yes" : "no"}
                 </td>
-                <td>{item.status}</td>
+                <td>{toStatusLabel(item.status)}</td>
                 <td>
                   <div className="split">
                     <button className="btn" type="button" onClick={() => review(item.id, "approved")}>

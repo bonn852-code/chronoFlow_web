@@ -2,10 +2,12 @@ import { NextRequest } from "next/server";
 import { checkAdminRequest } from "@/lib/api-auth";
 import { jsonError, jsonOk } from "@/lib/http";
 import { supabaseAdmin } from "@/lib/supabase";
+import { isUuid } from "@/lib/utils";
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   if (!checkAdminRequest(req)) return jsonError("Unauthorized", 401);
   const { id } = await params;
+  if (!isUuid(id)) return jsonError("IDが不正です", 400);
 
   const { error } = await supabaseAdmin.from("member_links").delete().eq("id", id);
   if (error) return jsonError("リンク削除に失敗しました", 500);

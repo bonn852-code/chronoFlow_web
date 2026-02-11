@@ -153,6 +153,32 @@ export async function getLatestPublicAnnouncements(limit = 10) {
   return data || [];
 }
 
+export async function getPublicAnnouncementsPaged(page = 1, pageSize = 3) {
+  const safePage = Math.max(1, page);
+  const safeSize = Math.min(30, Math.max(1, pageSize));
+  const from = (safePage - 1) * safeSize;
+  const to = from + safeSize - 1;
+
+  const [{ data, error }, { count, error: countErr }] = await Promise.all([
+    supabaseAdmin
+      .from("announcements")
+      .select("id,title,body,scope,created_at")
+      .eq("scope", "public")
+      .order("created_at", { ascending: false })
+      .range(from, to),
+    supabaseAdmin.from("announcements").select("*", { count: "exact", head: true }).eq("scope", "public")
+  ]);
+
+  if (error) throw error;
+  if (countErr) throw countErr;
+  return {
+    announcements: data || [],
+    total: count || 0,
+    page: safePage,
+    pageSize: safeSize
+  };
+}
+
 export async function getAuditionBatchesPaged(page = 1, pageSize = 7, publishedOnly = false) {
   const safePage = Math.max(1, page);
   const safeSize = Math.min(30, Math.max(1, pageSize));

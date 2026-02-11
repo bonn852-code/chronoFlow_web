@@ -417,6 +417,15 @@ textarea {
   color: #3b5f85;
 }
 
+.alert-banner {
+  border: 1px solid rgba(255, 94, 115, 0.35);
+  border-radius: 14px;
+  padding: 12px 14px;
+  background: linear-gradient(130deg, rgba(255, 94, 115, 0.14), rgba(255, 160, 120, 0.12));
+  color: #7f1d2f;
+  font-weight: 700;
+}
+
 .alert-strong {
   border: 1px solid rgba(26, 169, 255, 0.34);
   border-radius: 14px;

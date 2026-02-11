@@ -85,7 +85,7 @@ export default function AuditionForm() {
         },
         body: JSON.stringify(payload)
       });
-      const data = (await response.json()) as { applicationCode?: string; error?: string };
+      const data = (await response.json()) as { applicationCode?: string | null; error?: string };
 
       if (!response.ok) {
         setMessage(data.error || "送信に失敗しました");
@@ -93,6 +93,9 @@ export default function AuditionForm() {
       }
 
       setApplicationCode(data.applicationCode || null);
+      if (!data.applicationCode) {
+        setMessage("申請を受け付けました。アドバイス希望をONにした方のみ申請コードが発行されます。");
+      }
     } catch {
       setMessage("通信エラーが発生しました");
     } finally {
@@ -103,6 +106,11 @@ export default function AuditionForm() {
   return (
     <div className="card stack">
       <h1>審査申請</h1>
+      {!isOpen ? (
+        <div className="alert-banner">
+          <strong>現在は募集期間外です。</strong> 次回の募集開始までお待ちください。
+        </div>
+      ) : null}
       <p className="notice">申請期間: {periodText || "読み込み中..."}</p>
       <form action={onSubmit}>
         <fieldset disabled={loading || !isOpen} style={{ margin: 0, padding: 0, border: 0, display: "grid", gap: 14 }}>
@@ -131,7 +139,6 @@ export default function AuditionForm() {
           </button>
         </fieldset>
       </form>
-      {!isOpen ? <p className="meta">現在は募集期間外です。次回の募集開始までお待ちください。</p> : null}
       {!isLoggedIn ? (
         <p className="meta">審査申請にはログインが必要です。ログイン後に申請してください。</p>
       ) : null}
