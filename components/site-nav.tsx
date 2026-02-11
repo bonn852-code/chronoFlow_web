@@ -105,20 +105,7 @@ export function SiteNav({ mobile }: { mobile?: boolean } = {}) {
 
   async function openAdmin(event: MouseEvent<HTMLAnchorElement>) {
     event.preventDefault();
-    const {
-      data: { session }
-    } = await supabase.auth.getSession();
-    if (session?.access_token) {
-      try {
-        await syncAdminSession(session.access_token);
-        router.push("/admin");
-        return;
-      } catch {
-        router.push("/auth/login?next=/admin");
-        return;
-      }
-    }
-    router.push("/auth/login?next=/admin");
+    router.push("/enter-admin");
   }
 
   function navClass(match: (path: string) => boolean) {
@@ -194,7 +181,12 @@ export function SiteNav({ mobile }: { mobile?: boolean } = {}) {
         </Link>
       ) : null}
       {authReady && isAdmin ? (
-        <Link href="/admin" className={navClass((p) => p.startsWith("/admin"))} aria-label="管理" onClick={openAdmin}>
+        <Link
+          href="/enter-admin"
+          className={navClass((p) => p.startsWith("/admin") || p.startsWith("/enter-admin"))}
+          aria-label="管理"
+          onClick={openAdmin}
+        >
           <span className="nav-icon" aria-hidden="true">
             <Image src="/icons/admin.png" alt="" width={22} height={22} />
           </span>

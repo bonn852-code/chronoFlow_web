@@ -83,8 +83,7 @@ export async function proxy(req: NextRequest) {
   }
 
   const url = req.nextUrl.clone();
-  url.pathname = "/auth/login";
-  url.searchParams.set("next", pathname);
+  url.pathname = "/enter-admin";
   return NextResponse.redirect(url);
 }
 

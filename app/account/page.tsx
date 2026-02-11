@@ -22,16 +22,16 @@ export default function AccountPage() {
   useEffect(() => {
     async function init() {
       const {
-        data: { user }
-      } = await supabase.auth.getUser();
-      if (!user?.email) {
+        data: { session }
+      } = await supabase.auth.getSession();
+      if (!session?.user?.email) {
         router.push("/auth/login");
         return;
       }
-      const {
-        data: { session }
-      } = await supabase.auth.getSession();
-      if (session?.access_token) {
+      setEmail(session.user.email);
+      setLoading(false);
+
+      if (session.access_token) {
         const statusRes = await fetch("/api/me/status", {
           headers: { Authorization: `Bearer ${session.access_token}` },
           credentials: "same-origin"
@@ -45,15 +45,16 @@ export default function AccountPage() {
           }
         }
       }
-      setEmail(user.email);
-      setLoading(false);
     }
     void init();
   }, [router, supabase.auth]);
 
   async function logout() {
     setLogoutLoading(true);
-    await supabase.auth.signOut();
+    await Promise.all([
+      supabase.auth.signOut(),
+      fetch("/api/admin/session/clear", { method: "POST", credentials: "same-origin" }).catch(() => undefined)
+    ]);
     router.replace("/");
   }
 
@@ -108,7 +109,10 @@ export default function AccountPage() {
       return;
     }
 
-    await supabase.auth.signOut();
+    await Promise.all([
+      supabase.auth.signOut(),
+      fetch("/api/admin/session/clear", { method: "POST", credentials: "same-origin" }).catch(() => undefined)
+    ]);
     setMessage("アカウントを削除しました。");
     router.replace("/");
   }

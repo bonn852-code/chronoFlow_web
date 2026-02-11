@@ -10,7 +10,6 @@ export default function LoginPage() {
   const adminEmail = (process.env.NEXT_PUBLIC_ADMIN_EMAIL || "bonnedits852@gmail.com").trim().toLowerCase();
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
-  const [warning, setWarning] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [slowNotice, setSlowNotice] = useState(false);
   const inFlightRef = useRef(false);
@@ -23,43 +22,11 @@ export default function LoginPage() {
     }
   }, []);
 
-  async function syncAdminSession(token?: string) {
-    if (!token) return;
-    const response = await fetch("/api/admin/session/sync", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
-      credentials: "same-origin",
-      keepalive: true
-    });
-    if (!response.ok) throw new Error("admin session sync failed");
-  }
-
-  async function ensureAdminSession(token?: string) {
-    if (!token) return false;
-    for (let i = 0; i < 3; i += 1) {
-      try {
-        await syncAdminSession(token);
-        return true;
-      } catch {
-        await new Promise((resolve) => setTimeout(resolve, 250));
-      }
-    }
-    return false;
-  }
-
-  async function ensureAdminSessionWithRefresh(initialToken?: string) {
-    const ok = await ensureAdminSession(initialToken);
-    if (ok) return true;
-    const refreshed = await supabase.auth.refreshSession();
-    const retryToken = refreshed.data.session?.access_token;
-    if (!retryToken) return false;
-    return ensureAdminSession(retryToken);
-  }
-
   function nextPath() {
     if (typeof window === "undefined") return "/";
     const raw = new URLSearchParams(window.location.search).get("next") || "/";
     if (!raw.startsWith("/")) return "/";
+    if (raw.startsWith("/admin")) return "/enter-admin";
     return raw;
   }
 
@@ -67,7 +34,6 @@ export default function LoginPage() {
     inFlightRef.current = true;
     setLoading(true);
     setError(null);
-    setWarning(null);
     setSlowNotice(false);
     slowTimer.current = setTimeout(() => setSlowNotice(true), 1200);
   }
@@ -111,20 +77,9 @@ export default function LoginPage() {
       }
     }
 
-    const accessToken = data.session?.access_token;
     const target = nextPath();
-    const needsAdmin = target.startsWith("/admin");
-    if (email.toLowerCase() === adminEmail && accessToken) {
-      const synced = await ensureAdminSessionWithRefresh(accessToken);
-      if (!synced) {
-        if (needsAdmin) {
-          setError("管理者セッションの同期に失敗しました。再度ログインしてください。");
-          endSubmit();
-          return;
-        }
-        setWarning("管理者セッション同期が遅延しています。通常ページへ移動します。");
-      }
-    } else if (needsAdmin) {
+    const needsAdmin = target === "/enter-admin";
+    if (needsAdmin && email.toLowerCase() !== adminEmail) {
       setError("管理者ページへアクセスする権限がありません。");
       endSubmit();
       return;
@@ -139,20 +94,13 @@ export default function LoginPage() {
     supabase.auth.getSession().then(async ({ data }) => {
       if (!mounted || !data.session) return;
       const target = nextPath();
-      const needsAdmin = target.startsWith("/admin");
+      const needsAdmin = target === "/enter-admin";
       const email = data.session.user.email?.toLowerCase() || "";
       if (needsAdmin) {
         if (email !== adminEmail) {
           router.replace("/" as never);
           return;
         }
-        const synced = await ensureAdminSessionWithRefresh(data.session.access_token);
-        if (!synced) {
-          setError("管理者セッションの同期に失敗しました。もう一度ログインしてください。");
-          return;
-        }
-      } else if (email === adminEmail) {
-        await ensureAdminSessionWithRefresh(data.session.access_token).catch(() => undefined);
       }
       router.replace(target as never);
     });
@@ -178,7 +126,6 @@ export default function LoginPage() {
         </button>
       </form>
       {error ? <p className="meta">{error}</p> : null}
-      {warning ? <p className="meta">{warning}</p> : null}
       {loading && slowNotice ? <p className="meta">処理に数秒かかる場合があります。ボタンは1回だけ押してお待ちください。</p> : null}
       <p className="meta">
         アカウントをお持ちでない場合は <Link href="/auth/register">新規登録</Link>

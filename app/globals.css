@@ -151,6 +151,16 @@ a {
   object-fit: contain;
 }
 
+.nav-icon svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+  fill: currentColor;
+  stroke: currentColor;
+  stroke-width: 0;
+  flex: 0 0 auto;
+}
+
 .nav a:hover,
 .nav a.active,
 .nav-link:hover,
@@ -650,6 +660,16 @@ textarea {
     width: 22px;
     height: 22px;
     object-fit: contain;
+  }
+
+  .site-nav .nav-icon svg {
+    width: 22px;
+    height: 22px;
+    display: block;
+    fill: currentColor;
+    stroke: currentColor;
+    stroke-width: 0;
+    flex: 0 0 auto;
   }
 
   .site-nav .nav-text {
