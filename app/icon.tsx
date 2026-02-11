@@ -17,31 +17,18 @@ export default function Icon() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "radial-gradient(circle at 20% 15%, #2fe0ff 0%, #129cff 42%, #0d5ed3 100%)",
-          borderRadius: 96,
-          position: "relative"
+          background: "radial-gradient(circle at 18% 18%, #35e2ff 0%, #169bff 45%, #0d58cf 100%)",
+          borderRadius: 96
         }}
       >
         <div
           style={{
-            width: 398,
-            height: 398,
+            width: 438,
+            height: 438,
             borderRadius: 9999,
-            border: "56px solid #ffffff",
+            border: "72px solid #ffffff",
             borderRightColor: "transparent",
-            transform: "rotate(-23deg)",
-            opacity: 0.98
-          }}
-        />
-        <div
-          style={{
-            width: 88,
-            height: 88,
-            borderRadius: 9999,
-            background: "#ffffff",
-            position: "absolute",
-            right: 94,
-            top: 168
+            transform: "rotate(-14deg)"
           }}
         />
       </div>
