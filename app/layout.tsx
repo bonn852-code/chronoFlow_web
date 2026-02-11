@@ -27,8 +27,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 className="brand-logo"
               />
             </Link>
-            <AccountFabLink />
             <SiteNav />
+            <AccountFabLink />
           </div>
         </header>
         <main className="container">{children}</main>

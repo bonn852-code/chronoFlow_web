@@ -31,7 +31,8 @@ export function GuestRegisterCta() {
 
   return (
     <div className="hero-cta">
-      <p className="meta">活動参加を始めるなら</p>
+      <strong>参加は無料です</strong>
+      <p className="meta">アカウントを作成すると審査申請や結果確認がすぐ行えます。</p>
       <div className="split">
         <Link href="/auth/register" className="btn primary">
           無料で新規登録
