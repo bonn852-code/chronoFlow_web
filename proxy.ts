@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { adminCookieName } from "@/lib/constants";
+import { readAdminSessionToken } from "@/lib/constants";
 import { verifyAdminSessionTokenEdge } from "@/lib/admin-auth-edge";
 
 const ADMIN_PATHS = ["/admin", "/api/admin"];
@@ -29,6 +29,9 @@ export async function proxy(req: NextRequest) {
   response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
   response.headers.set("Cross-Origin-Opener-Policy", "same-origin");
   response.headers.set("Cross-Origin-Resource-Policy", "same-site");
+  response.headers.set("X-DNS-Prefetch-Control", "off");
+  response.headers.set("X-Permitted-Cross-Domain-Policies", "none");
+  response.headers.set("Origin-Agent-Cluster", "?1");
   if (process.env.NODE_ENV === "production") {
     response.headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");
   }
@@ -41,18 +44,20 @@ export async function proxy(req: NextRequest) {
       "style-src 'self' 'unsafe-inline'",
       "script-src 'self' 'unsafe-inline'",
       "frame-src https://www.youtube.com https://www.youtube-nocookie.com",
-      "connect-src 'self' https:",
+      "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
+      "worker-src 'self' blob:",
       "base-uri 'self'",
       "form-action 'self'",
       "object-src 'none'",
-      "frame-ancestors 'none'"
+      "frame-ancestors 'none'",
+      ...(process.env.NODE_ENV === "production" ? ["upgrade-insecure-requests"] : [])
     ].join("; ")
   );
 
   if (!needsAdmin(pathname)) {
     if (pathname.startsWith("/admin/login")) {
       const loginKey = process.env.ADMIN_LOGIN_KEY;
-      const hasSession = Boolean(req.cookies.get(adminCookieName)?.value);
+      const hasSession = Boolean(readAdminSessionToken(req.cookies));
       if (!hasSession && loginKey) {
         const queryKey = req.nextUrl.searchParams.get("k");
         if (queryKey !== loginKey) {
@@ -70,7 +75,7 @@ export async function proxy(req: NextRequest) {
     }
   }
 
-  const token = req.cookies.get(adminCookieName)?.value;
+  const token = readAdminSessionToken(req.cookies);
   const secret = process.env.ADMIN_SESSION_SECRET || "";
   const valid = token && secret ? await verifyAdminSessionTokenEdge(token, secret) : false;
 

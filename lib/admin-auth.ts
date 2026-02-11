@@ -1,7 +1,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
 import { env } from "@/lib/env";
-import { adminCookieName, adminSessionMaxAgeSeconds } from "@/lib/constants";
+import { adminCookieName, adminCookieNames, adminSessionMaxAgeSeconds, readAdminSessionToken } from "@/lib/constants";
 
 type SessionPayload = {
   role: "admin";
@@ -55,7 +55,7 @@ export function verifyAdminSessionToken(token: string): boolean {
 
 export async function isAdminSessionValid(): Promise<boolean> {
   const cookieStore = await cookies();
-  const token = cookieStore.get(adminCookieName)?.value;
+  const token = readAdminSessionToken(cookieStore);
   if (!token) return false;
   return verifyAdminSessionToken(token);
 }
@@ -69,15 +69,29 @@ export async function setAdminCookie(): Promise<void> {
     path: "/",
     maxAge: adminSessionMaxAgeSeconds
   });
+
+  // Clear legacy cookie name to prevent mixed-session behavior after hardening.
+  for (const cookieName of adminCookieNames) {
+    if (cookieName === adminCookieName) continue;
+    cookieStore.set(cookieName, "", {
+      httpOnly: true,
+      sameSite: "strict",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      expires: new Date(0)
+    });
+  }
 }
 
 export async function clearAdminCookie(): Promise<void> {
   const cookieStore = await cookies();
-  cookieStore.set(adminCookieName, "", {
-    httpOnly: true,
-    sameSite: "strict",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    expires: new Date(0)
-  });
+  for (const cookieName of adminCookieNames) {
+    cookieStore.set(cookieName, "", {
+      httpOnly: true,
+      sameSite: "strict",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      expires: new Date(0)
+    });
+  }
 }

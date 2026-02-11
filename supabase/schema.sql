@@ -208,6 +208,11 @@ left join link_reactions lr
   and lr.created_at >= now() - interval '30 days'
 group by m.id;
 
+alter view if exists public.view_member_reactions_all set (security_invoker = true);
+alter view if exists public.view_member_reactions_30d set (security_invoker = true);
+alter view if exists public.view_member_video_likes_all set (security_invoker = true);
+alter view if exists public.view_member_video_likes_30d set (security_invoker = true);
+
 insert into audition_batches(title)
 select to_char(now(), 'YYYY Mon') || ' Audition'
 where not exists (select 1 from audition_batches);
@@ -239,6 +244,33 @@ drop policy if exists link_reactions_public_select on link_reactions;
 drop policy if exists lessons_public_select on lessons_ae;
 drop policy if exists announcements_public_select on announcements;
 drop policy if exists auditions_public_insert on audition_applications;
+
+do $$
+declare
+  p record;
+begin
+  for p in
+    select policyname, tablename
+    from pg_policies
+    where schemaname = 'public'
+      and tablename in (
+        'members',
+        'member_links',
+        'reactions',
+        'link_reactions',
+        'audition_batches',
+        'audition_applications',
+        'assets',
+        'lessons_ae',
+        'announcements',
+        'user_account_controls',
+        'contact_inquiries',
+        'security_events'
+      )
+  loop
+    execute format('drop policy if exists %I on public.%I', p.policyname, p.tablename);
+  end loop;
+end $$;
 
 -- Hardened mode: no public RLS policies.
 -- All reads/writes are expected to go through server-side APIs using Service Role.
