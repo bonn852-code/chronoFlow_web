@@ -41,7 +41,7 @@ export default function AdminLoginPage() {
       <section className="card" style={{ maxWidth: 520, margin: "32px auto" }}>
         <h1>管理者ログイン</h1>
         <p className="meta">
-          このログイン方式は本番運用のため無効化されています。`bonnedits852@gmail.com` で通常ログインし、ヘッダーの「管理」から入ってください。
+          このログイン方式は本番運用のため無効化されています。管理者メールで通常ログインし、ヘッダーの「管理」から入ってください。
         </p>
       </section>
     );

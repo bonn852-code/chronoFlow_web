@@ -86,10 +86,16 @@ alter table members
 create table if not exists assets (
   id uuid primary key default gen_random_uuid(),
   name text not null,
-  storage_path text not null unique,
+  external_url text not null,
+  description text null,
+  storage_path text unique,
   scope text not null default 'members' check (scope in ('members')),
   created_at timestamptz not null default now()
 );
+
+alter table assets add column if not exists external_url text;
+alter table assets add column if not exists description text;
+alter table assets alter column storage_path drop not null;
 
 create table if not exists lessons_ae (
   id uuid primary key default gen_random_uuid(),

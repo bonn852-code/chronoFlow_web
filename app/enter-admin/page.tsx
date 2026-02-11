@@ -9,7 +9,7 @@ type Phase = "checking" | "syncing" | "error";
 export default function EnterAdminPage() {
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const router = useRouter();
-  const adminEmail = (process.env.NEXT_PUBLIC_ADMIN_EMAIL || "bonnedits852@gmail.com").trim().toLowerCase();
+  const adminEmail = (process.env.NEXT_PUBLIC_ADMIN_EMAIL || "admin@example.com").trim().toLowerCase();
   const [phase, setPhase] = useState<Phase>("checking");
   const [message, setMessage] = useState("管理者認証を確認しています...");
 

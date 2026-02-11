@@ -162,6 +162,14 @@ a {
   flex: 0 0 auto;
 }
 
+.nav-icon-account svg {
+  width: 21px;
+  height: 21px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+}
+
 .nav a:hover,
 .nav a.active,
 .nav-link:hover,
@@ -283,11 +291,54 @@ main {
 }
 
 .pager {
-  display: flex;
-  justify-content: center;
+  display: grid;
+  grid-template-columns: minmax(84px, 1fr) auto minmax(84px, 1fr);
   align-items: center;
   gap: 10px;
+}
+
+.pager > :first-child {
+  justify-self: start;
+}
+
+.pager > :last-child {
+  justify-self: end;
+}
+
+.pager .meta {
+  text-align: center;
+  white-space: nowrap;
+}
+
+.pager-inline {
+  display: grid;
+  grid-template-columns: minmax(84px, 1fr) auto minmax(84px, 1fr);
+  align-items: center;
+  gap: 10px;
+}
+
+.pager-inline > :first-child {
+  justify-self: start;
+}
+
+.pager-inline > :last-child {
+  justify-self: end;
+}
+
+.pager-inline .meta {
+  text-align: center;
+  white-space: nowrap;
+}
+
+.home-actions {
+  display: flex;
+  gap: 10px;
   flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.home-actions .btn {
+  white-space: nowrap;
 }
 
 .mobile-bottom-nav {
@@ -691,6 +742,14 @@ iframe {
     flex: 0 0 auto;
   }
 
+  .site-nav .nav-icon-account svg {
+    width: 24px;
+    height: 24px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.9;
+  }
+
   .site-nav .nav-text {
     display: none;
   }
@@ -738,15 +797,7 @@ iframe {
   }
 
   .split {
-    flex-direction: column;
-    align-items: stretch;
     gap: 8px;
-  }
-
-  .split > .btn,
-  .split > a.btn,
-  .split > button {
-    width: 100%;
   }
 
   .btn {
@@ -770,6 +821,16 @@ iframe {
 
   .home-members-grid {
     grid-template-columns: 1fr;
+  }
+
+  .home-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .home-actions .btn {
+    flex: 1 1 0;
+    text-align: center;
   }
 
   .member-hero {

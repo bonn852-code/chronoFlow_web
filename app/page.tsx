@@ -44,7 +44,7 @@ export default async function HomePage({
             </div>
           ))}
         </article>
-        <section className="split">
+        <section className="pager-inline">
           {annPage > 1 ? (
             <Link href={`/?annPage=${annPage - 1}&memberPage=${memberPage}`} className="btn">
               前へ
@@ -72,7 +72,7 @@ export default async function HomePage({
       <section className="section">
         <div className="split">
           <h2>メンバー</h2>
-          <div className="split">
+          <div className="home-actions">
             <Link href="/members" className="btn">
               メンバー一覧
             </Link>
@@ -94,7 +94,7 @@ export default async function HomePage({
             />
           ))}
         </div>
-        <section className="split">
+        <section className="pager-inline">
           {memberPage > 1 ? (
             <Link href={`/?memberPage=${memberPage - 1}&annPage=${annPage}`} className="btn">
               前へ

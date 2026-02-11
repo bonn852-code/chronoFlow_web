@@ -44,7 +44,7 @@ export default async function AuditionResultPage({
         })}
       </section>
 
-      <section className="split">
+      <section className="pager-inline">
         {page > 1 ? (
           <Link href={`/auditions/result?page=${page - 1}`} className="btn">
             前へ

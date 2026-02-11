@@ -61,7 +61,8 @@ export type Announcement = {
 export type Asset = {
   id: string;
   name: string;
-  storage_path: string;
+  external_url: string;
+  description: string | null;
   scope: "members";
   created_at: string;
 };

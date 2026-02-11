@@ -8,7 +8,7 @@ import { usePathname, useRouter } from "next/navigation";
 
 export function SiteNav({ mobile }: { mobile?: boolean } = {}) {
   const supabase = createSupabaseBrowserClient();
-  const adminEmail = (process.env.NEXT_PUBLIC_ADMIN_EMAIL || "bonnedits852@gmail.com").toLowerCase();
+  const adminEmail = (process.env.NEXT_PUBLIC_ADMIN_EMAIL || "admin@example.com").toLowerCase();
   const router = useRouter();
   const pathname = usePathname();
   const [authReady, setAuthReady] = useState(false);
@@ -138,6 +138,14 @@ export function SiteNav({ mobile }: { mobile?: boolean } = {}) {
         </span>
         <span className="nav-text">AE学習</span>
       </Link>
+      {authReady && loggedIn ? (
+        <Link href="/assets" className={navClass((p) => p.startsWith("/assets"))} aria-label="Assets">
+          <span className="nav-icon" aria-hidden="true">
+            <Image src="/icons/assets.png" alt="" width={22} height={22} />
+          </span>
+          <span className="nav-text">Assets</span>
+        </Link>
+      ) : null}
       <Link href="/contact" className={navClass((p) => p.startsWith("/contact"))} aria-label="お問い合わせ">
         <span className="nav-icon" aria-hidden="true">
           <Image src="/icons/contact.png" alt="" width={22} height={22} />
@@ -162,10 +170,10 @@ export function SiteNav({ mobile }: { mobile?: boolean } = {}) {
       ) : null}
       {authReady && loggedIn ? (
         <Link href="/account" className={navClass((p) => p.startsWith("/account"))} aria-label="アカウント">
-          <span className="nav-icon" aria-hidden="true">
+          <span className="nav-icon nav-icon-account" aria-hidden="true">
             <svg viewBox="0 0 24 24" aria-hidden="true">
-              <circle cx="12" cy="8" r="4" />
-              <path d="M4 20c0-4.2 3.6-7 8-7s8 2.8 8 7" />
+              <circle cx="12" cy="8" r="3.8" />
+              <path d="M4.6 20c0-4.1 3.3-6.8 7.4-6.8s7.4 2.7 7.4 6.8" />
             </svg>
           </span>
           <span className="nav-text">アカウント</span>

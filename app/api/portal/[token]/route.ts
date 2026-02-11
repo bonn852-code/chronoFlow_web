@@ -20,32 +20,15 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ toke
   if (memberErr) return jsonError("ポータル取得に失敗しました", 500);
   if (!member) return jsonError("無効なトークンです", 404);
 
-  const [{ data: announcements, error: annErr }, { data: assets, error: assetErr }] = await Promise.all([
-    supabaseAdmin
-      .from("announcements")
-      .select("id,title,body,scope,created_at")
-      .eq("scope", "members")
-      .order("created_at", { ascending: false }),
-    supabaseAdmin.from("assets").select("id,name,storage_path,created_at").eq("scope", "members").order("created_at", { ascending: false })
-  ]);
-
-  if (annErr || assetErr) return jsonError("ポータル情報の取得に失敗しました", 500);
-
-  const signedAssets = await Promise.all(
-    (assets || []).map(async (asset) => {
-      const { data } = await supabaseAdmin.storage.from("member-assets").createSignedUrl(asset.storage_path, 60 * 60);
-      return {
-        id: asset.id,
-        name: asset.name,
-        url: data?.signedUrl || null,
-        created_at: asset.created_at
-      };
-    })
-  );
+  const { data: announcements, error: annErr } = await supabaseAdmin
+    .from("announcements")
+    .select("id,title,body,scope,created_at")
+    .eq("scope", "members")
+    .order("created_at", { ascending: false });
+  if (annErr) return jsonError("ポータル情報の取得に失敗しました", 500);
 
   return jsonOk({
     member: { id: member.id, displayName: member.display_name },
-    announcements: announcements || [],
-    assets: signedAssets
+    announcements: announcements || []
   });
 }

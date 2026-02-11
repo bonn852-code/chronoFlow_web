@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
 
   const normalized = (value?: string | null) => (value || "").trim().toLowerCase();
   const allowedAdminEmails = new Set(
-    [normalized(env.adminEmail), normalized(process.env.NEXT_PUBLIC_ADMIN_EMAIL), "bonnedits852@gmail.com"].filter(Boolean)
+    [normalized(env.adminEmail), normalized(process.env.NEXT_PUBLIC_ADMIN_EMAIL)].filter(Boolean)
   );
 
   if (!allowedAdminEmails.has(user.email.toLowerCase())) {

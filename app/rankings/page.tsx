@@ -59,7 +59,7 @@ export default async function RankingsPage({
         </table>
       </section>
 
-      <section className="split">
+      <section className="pager-inline">
         {page > 1 ? (
           <Link href={`/rankings?range=${range}&page=${page - 1}`} className="btn">
             前へ

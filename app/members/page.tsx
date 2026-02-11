@@ -57,7 +57,7 @@ export default async function MembersPage({
         </section>
       ) : null}
 
-      <section className="split">
+      <section className="pager-inline">
         {page > 1 ? (
           <Link href={`/members?query=${encodeURIComponent(query)}&page=${page - 1}`} className="btn">
             前へ

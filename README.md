@@ -23,12 +23,12 @@ npm install
 ```env
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
-NEXT_PUBLIC_ADMIN_EMAIL=bonnedits852@gmail.com
+NEXT_PUBLIC_ADMIN_EMAIL=admin@example.com
 NEXT_PUBLIC_ENABLE_ADMIN_PASSWORD_LOGIN=false
 SUPABASE_SERVICE_ROLE_KEY=
 ADMIN_SESSION_SECRET=
 ADMIN_LOGIN_KEY=
-ADMIN_EMAIL=bonnedits852@gmail.com
+ADMIN_EMAIL=admin@example.com
 ENABLE_ADMIN_PASSWORD_LOGIN=false
 SITE_NAME=ChronoFlow
 ```
@@ -90,7 +90,7 @@ npm run dev
 - Admin auth cookie: signed `httpOnly`, `Secure`, `SameSite=Strict`
 - Admin email固定: `ADMIN_EMAIL` / `NEXT_PUBLIC_ADMIN_EMAIL`
 - Admin login concealment: optional `ADMIN_LOGIN_KEY` (access via `/admin/login?k=...`)
-- `bonnedits852@gmail.com` で通常ログインすると管理アクセスが有効化
+- `ADMIN_EMAIL` に設定したメールで通常ログインすると管理アクセスが有効化
 - 停止済みアカウントはログイン後も操作不可（申請/問い合わせ/退会などをAPI側で拒否）
 - `admin/password` ログインは既定で無効（`ENABLE_ADMIN_PASSWORD_LOGIN=false`）
 - Middleware guard: `/admin/*` and `/api/admin/*`

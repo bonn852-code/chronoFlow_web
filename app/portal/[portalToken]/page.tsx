@@ -15,17 +15,11 @@ export default async function PortalPage({ params }: { params: Promise<{ portalT
 
   if (!member) notFound();
 
-  const [{ data: announcements }, { data: assets }] = await Promise.all([
-    supabaseAdmin.from("announcements").select("id,title,body,created_at").eq("scope", "members").order("created_at", { ascending: false }),
-    supabaseAdmin.from("assets").select("id,name,storage_path,created_at").eq("scope", "members").order("created_at", { ascending: false })
-  ]);
-
-  const signedAssets = await Promise.all(
-    (assets || []).map(async (asset) => {
-      const { data } = await supabaseAdmin.storage.from("member-assets").createSignedUrl(asset.storage_path, 60 * 60);
-      return { ...asset, url: data?.signedUrl };
-    })
-  );
+  const { data: announcements } = await supabaseAdmin
+    .from("announcements")
+    .select("id,title,body,created_at")
+    .eq("scope", "members")
+    .order("created_at", { ascending: false });
 
   return (
     <div className="stack">
@@ -37,12 +31,9 @@ export default async function PortalPage({ params }: { params: Promise<{ portalT
       <section className="grid grid-2">
         <article className="card stack">
           <h2>配布素材</h2>
-          {!signedAssets.length ? <p className="meta">素材はまだありません。</p> : null}
-          {signedAssets.map((asset) => (
-            <a key={asset.id} href={asset.url || "#"} className="btn" target="_blank" rel="noreferrer">
-              {asset.name}
-            </a>
-          ))}
+          <p className="meta">
+            素材はログイン後に `Assets` ページで確認できます。セキュリティ保護のため、このポータルでは直接配布していません。
+          </p>
         </article>
 
         <article className="card stack">
