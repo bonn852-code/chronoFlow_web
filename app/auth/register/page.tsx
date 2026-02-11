@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { FormEvent, useRef, useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 import { PASSWORD_MIN_LENGTH, validatePasswordStrength } from "@/lib/password-policy";
 
@@ -17,6 +17,7 @@ export default function RegisterPage() {
   const [resending, setResending] = useState(false);
   const [slowNotice, setSlowNotice] = useState(false);
   const slowTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const inFlightRef = useRef(false);
 
   function syncAdminSession(token?: string) {
     if (!token) return;
@@ -27,13 +28,26 @@ export default function RegisterPage() {
     });
   }
 
-  async function onSubmit(formData: FormData) {
-    if (loading) return;
+  function beginSubmit() {
+    inFlightRef.current = true;
     setLoading(true);
     setError(null);
     setMessage(null);
     setSlowNotice(false);
     slowTimer.current = setTimeout(() => setSlowNotice(true), 1200);
+  }
+
+  function endSubmit() {
+    if (slowTimer.current) clearTimeout(slowTimer.current);
+    inFlightRef.current = false;
+    setLoading(false);
+  }
+
+  async function onSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (inFlightRef.current) return;
+    beginSubmit();
+    const formData = new FormData(event.currentTarget);
 
     const email = String(formData.get("email") || "").trim();
     const password = String(formData.get("password") || "");
@@ -41,16 +55,14 @@ export default function RegisterPage() {
 
     if (password !== passwordConfirm) {
       setError("確認用パスワードが一致しません。");
-      if (slowTimer.current) clearTimeout(slowTimer.current);
-      setLoading(false);
+      endSubmit();
       return;
     }
 
     const passwordError = validatePasswordStrength(password);
     if (passwordError) {
       setError(passwordError);
-      if (slowTimer.current) clearTimeout(slowTimer.current);
-      setLoading(false);
+      endSubmit();
       return;
     }
 
@@ -63,16 +75,14 @@ export default function RegisterPage() {
     });
     if (signUpError) {
       setError("新規登録に失敗しました。入力内容を確認してください。");
-      if (slowTimer.current) clearTimeout(slowTimer.current);
-      setLoading(false);
+      endSubmit();
       return;
     }
 
     if (data.user && !data.session) {
       setConfirmEmail(email);
       setMessage("確認メールを送信しました。メール内のURLを開いて登録を完了してください。");
-      if (slowTimer.current) clearTimeout(slowTimer.current);
-      setLoading(false);
+      endSubmit();
       return;
     }
 
@@ -81,7 +91,6 @@ export default function RegisterPage() {
       syncAdminSession(accessToken);
     }
 
-    if (slowTimer.current) clearTimeout(slowTimer.current);
     router.replace("/account");
   }
 
@@ -107,7 +116,7 @@ export default function RegisterPage() {
   return (
     <section className="card stack" style={{ maxWidth: 520, margin: "30px auto" }}>
       <h1>新規登録</h1>
-      <form action={onSubmit}>
+      <form onSubmit={onSubmit}>
         <fieldset disabled={loading} style={{ margin: 0, padding: 0, border: 0, display: "grid", gap: 14 }}>
           <label>
             メールアドレス
@@ -145,6 +154,7 @@ export default function RegisterPage() {
       </form>
       {error ? <p className="meta">{error}</p> : null}
       {message ? <p className="meta">{message}</p> : null}
+      {loading && !confirmEmail ? <p className="meta">登録処理を実行中です。ボタンは1回だけ押せば大丈夫です。</p> : null}
       {loading && slowNotice ? (
         <p className="meta">送信に数秒かかる場合があります。画面を閉じずにこのままお待ちください。</p>
       ) : null}
