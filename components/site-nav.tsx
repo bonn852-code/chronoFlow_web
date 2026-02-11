@@ -13,12 +13,13 @@ export function SiteNav({ mobile }: { mobile?: boolean } = {}) {
 
   async function syncAdminSession(sessionToken?: string) {
     if (!sessionToken) {
-      await fetch("/api/admin/session/clear", { method: "POST" });
+      await fetch("/api/admin/session/clear", { method: "POST", credentials: "same-origin" });
       return;
     }
     await fetch("/api/admin/session/sync", {
       method: "POST",
-      headers: { Authorization: `Bearer ${sessionToken}` }
+      headers: { Authorization: `Bearer ${sessionToken}` },
+      credentials: "same-origin"
     });
   }
 
@@ -31,7 +32,7 @@ export function SiteNav({ mobile }: { mobile?: boolean } = {}) {
       const email = session?.user?.email?.toLowerCase() || "";
       const admin = email === adminEmail;
       setIsAdmin(admin);
-      void syncAdminSession(admin ? session?.access_token : undefined);
+      void syncAdminSession(admin ? session?.access_token : undefined).catch(() => undefined);
     });
 
     const {
@@ -41,7 +42,7 @@ export function SiteNav({ mobile }: { mobile?: boolean } = {}) {
       const email = session?.user?.email?.toLowerCase() || "";
       const admin = email === adminEmail;
       setIsAdmin(admin);
-      void syncAdminSession(admin ? session?.access_token : undefined);
+      void syncAdminSession(admin ? session?.access_token : undefined).catch(() => undefined);
     });
 
     return () => {

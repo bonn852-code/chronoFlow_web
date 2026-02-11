@@ -5,7 +5,7 @@ function must(key: string): string {
 }
 
 const adminSessionSecret = must("ADMIN_SESSION_SECRET");
-const adminEmail = process.env.ADMIN_EMAIL || process.env.NEXT_PUBLIC_ADMIN_EMAIL || "bonnedits852@gmail.com";
+const adminEmail = (process.env.ADMIN_EMAIL || process.env.NEXT_PUBLIC_ADMIN_EMAIL || "bonnedits852@gmail.com").trim();
 const enableAdminPasswordLogin = process.env.ENABLE_ADMIN_PASSWORD_LOGIN === "true";
 const adminPassword = process.env.ADMIN_PASSWORD || "";
 

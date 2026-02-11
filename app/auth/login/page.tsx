@@ -7,16 +7,17 @@ import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 
 export default function LoginPage() {
   const supabase = createSupabaseBrowserClient();
-  const adminEmail = (process.env.NEXT_PUBLIC_ADMIN_EMAIL || "bonnedits852@gmail.com").toLowerCase();
+  const adminEmail = (process.env.NEXT_PUBLIC_ADMIN_EMAIL || "bonnedits852@gmail.com").trim().toLowerCase();
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  function syncAdminSession(token?: string) {
+  async function syncAdminSession(token?: string) {
     if (!token) return;
-    void fetch("/api/admin/session/sync", {
+    await fetch("/api/admin/session/sync", {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
+      credentials: "same-origin",
       keepalive: true
     });
   }
@@ -42,7 +43,13 @@ export default function LoginPage() {
 
     const accessToken = data.session?.access_token;
     if (email.toLowerCase() === adminEmail && accessToken) {
-      syncAdminSession(accessToken);
+      try {
+        await syncAdminSession(accessToken);
+      } catch {
+        setError("管理者セッションの同期に失敗しました。もう一度ログインしてください。");
+        setLoading(false);
+        return;
+      }
     }
 
     router.replace("/account");

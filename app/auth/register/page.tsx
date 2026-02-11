@@ -8,7 +8,7 @@ import { PASSWORD_MIN_LENGTH, validatePasswordStrength } from "@/lib/password-po
 
 export default function RegisterPage() {
   const supabase = createSupabaseBrowserClient();
-  const adminEmail = (process.env.NEXT_PUBLIC_ADMIN_EMAIL || "bonnedits852@gmail.com").toLowerCase();
+  const adminEmail = (process.env.NEXT_PUBLIC_ADMIN_EMAIL || "bonnedits852@gmail.com").trim().toLowerCase();
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
