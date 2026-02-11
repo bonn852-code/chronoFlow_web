@@ -61,6 +61,7 @@ alter table audition_batches add column if not exists deleted_at timestamptz nul
 create table if not exists audition_applications (
   id uuid primary key default gen_random_uuid(),
   batch_id uuid not null references audition_batches(id) on delete cascade,
+  applied_by_user_id uuid null,
   display_name text not null check (char_length(display_name) between 1 and 120),
   video_url text not null,
   sns_urls jsonb not null default '[]'::jsonb,
@@ -72,6 +73,9 @@ create table if not exists audition_applications (
   created_at timestamptz not null default now(),
   reviewed_at timestamptz null
 );
+
+alter table audition_applications add column if not exists applied_by_user_id uuid null;
+create index if not exists idx_audition_applications_user_id on audition_applications(applied_by_user_id);
 
 alter table audition_applications drop constraint if exists audition_applications_batch_id_fkey;
 alter table audition_applications

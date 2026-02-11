@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
 
     const { data: approved, error: appErr } = await supabaseAdmin
       .from("audition_applications")
-      .select("id,display_name")
+      .select("id,display_name,applied_by_user_id")
       .eq("batch_id", batch.id)
       .eq("status", "approved");
 
@@ -44,6 +44,31 @@ export async function POST(req: NextRequest) {
       if (inserts.length) {
         const { error: insertErr } = await supabaseAdmin.from("members").insert(inserts);
         if (insertErr) return jsonError("メンバー追加に失敗しました", 500);
+      }
+
+      const grantedUserIds = Array.from(
+        new Set(
+          (approved || [])
+            .map((a) => a.applied_by_user_id)
+            .filter((v): v is string => typeof v === "string" && v.length > 0)
+        )
+      );
+
+      if (grantedUserIds.length) {
+        const now = new Date().toISOString();
+        const rows = grantedUserIds.map((userId) => ({
+          user_id: userId,
+          is_member: true,
+          member_granted_at: now,
+          updated_at: now
+        }));
+        const { error: grantErr } = await supabaseAdmin.from("user_account_controls").upsert(rows, { onConflict: "user_id" });
+        if (grantErr) {
+          if ((grantErr as { code?: string }).code === "42703") {
+            return jsonError("DBの最新スキーマが未適用です（user_account_controls / audition_applications の追加列）", 500);
+          }
+          return jsonError("メンバー権限付与に失敗しました", 500);
+        }
       }
     }
 

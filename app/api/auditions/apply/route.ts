@@ -84,6 +84,7 @@ export async function POST(req: NextRequest) {
 
     const { error } = await supabaseAdmin.from("audition_applications").insert({
       batch_id: batch.id,
+      applied_by_user_id: user.id,
       display_name: displayName,
       video_url: videoUrl,
       sns_urls: snsUrls,

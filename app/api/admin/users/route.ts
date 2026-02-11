@@ -17,13 +17,34 @@ export async function GET(req: NextRequest) {
 
   const users = data.users || [];
   const ids = users.map((u) => u.id);
-  const { data: controls, error: controlErr } = ids.length
-    ? await supabaseAdmin
-        .from("user_account_controls")
-        .select("user_id,is_suspended,suspend_reason,suspended_at,is_member,member_granted_at")
-        .in("user_id", ids)
-    : { data: [], error: null };
-  if (controlErr) return jsonError("ユーザー制御情報の取得に失敗しました", 500);
+  let controls: Array<{
+    user_id: string;
+    is_suspended?: boolean;
+    suspend_reason?: string | null;
+    suspended_at?: string | null;
+    is_member?: boolean;
+    member_granted_at?: string | null;
+  }> = [];
+  if (ids.length) {
+    const withMember = await supabaseAdmin
+      .from("user_account_controls")
+      .select("user_id,is_suspended,suspend_reason,suspended_at,is_member,member_granted_at")
+      .in("user_id", ids);
+    if (withMember.error) {
+      if ((withMember.error as { code?: string }).code === "42703") {
+        const legacy = await supabaseAdmin
+          .from("user_account_controls")
+          .select("user_id,is_suspended,suspend_reason,suspended_at")
+          .in("user_id", ids);
+        if (legacy.error) return jsonError("ユーザー制御情報の取得に失敗しました", 500);
+        controls = legacy.data || [];
+      } else {
+        return jsonError("ユーザー制御情報の取得に失敗しました", 500);
+      }
+    } else {
+      controls = withMember.data || [];
+    }
+  }
 
   const controlMap = new Map((controls || []).map((c) => [c.user_id, c]));
   return jsonOk({
