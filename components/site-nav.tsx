@@ -99,6 +99,17 @@ export function SiteNav({ mobile }: { mobile?: boolean } = {}) {
           </Link>
         </>
       ) : null}
+      {loggedIn && !mobile ? (
+        <Link href="/account" className="nav-link" aria-label="アカウント">
+          <span className="nav-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="8" r="4" />
+              <path d="M4 20c0-4.2 3.6-7 8-7s8 2.8 8 7" />
+            </svg>
+          </span>
+          <span className="nav-text">アカウント</span>
+        </Link>
+      ) : null}
       {isAdmin ? (
         <Link href="/admin" className="nav-link" aria-label="管理">
           <span className="nav-icon" aria-hidden="true">
