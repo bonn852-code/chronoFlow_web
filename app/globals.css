@@ -426,6 +426,12 @@ textarea {
   font-weight: 700;
 }
 
+.alert-banner-login {
+  border-color: rgba(26, 169, 255, 0.38);
+  background: linear-gradient(130deg, rgba(26, 169, 255, 0.18), rgba(53, 215, 160, 0.14));
+  color: #0f365f;
+}
+
 .alert-strong {
   border: 1px solid rgba(26, 169, 255, 0.34);
   border-radius: 14px;

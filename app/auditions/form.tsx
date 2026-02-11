@@ -106,6 +106,11 @@ export default function AuditionForm() {
   return (
     <div className="card stack">
       <h1>審査申請</h1>
+      {!isLoggedIn ? (
+        <div className="alert-banner alert-banner-login">
+          <strong>審査申請にはログインが必要です。</strong> ログイン後に申請してください。
+        </div>
+      ) : null}
       {isOpen === false ? (
         <div className="alert-banner">
           <strong>現在は募集期間外です。</strong> 次回の募集開始までお待ちください。
@@ -139,9 +144,6 @@ export default function AuditionForm() {
           </button>
         </fieldset>
       </form>
-      {!isLoggedIn ? (
-        <p className="meta">審査申請にはログインが必要です。ログイン後に申請してください。</p>
-      ) : null}
 
       {applicationCode ? (
         <div className="card">
