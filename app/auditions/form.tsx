@@ -8,7 +8,7 @@ export default function AuditionForm() {
   const [applicationCode, setApplicationCode] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [isOpen, setIsOpen] = useState<boolean>(false);
+  const [isOpen, setIsOpen] = useState<boolean | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [periodText, setPeriodText] = useState<string>("");
 
@@ -46,7 +46,7 @@ export default function AuditionForm() {
   }, [supabase.auth]);
 
   async function onSubmit(formData: FormData) {
-    if (!isOpen) {
+    if (isOpen === false) {
       setMessage("現在は募集期間外のため申請できません。募集開始までお待ちください。");
       return;
     }
@@ -106,14 +106,14 @@ export default function AuditionForm() {
   return (
     <div className="card stack">
       <h1>審査申請</h1>
-      {!isOpen ? (
+      {isOpen === false ? (
         <div className="alert-banner">
           <strong>現在は募集期間外です。</strong> 次回の募集開始までお待ちください。
         </div>
       ) : null}
       <p className="notice">申請期間: {periodText || "読み込み中..."}</p>
       <form action={onSubmit}>
-        <fieldset disabled={loading || !isOpen} style={{ margin: 0, padding: 0, border: 0, display: "grid", gap: 14 }}>
+        <fieldset disabled={loading || isOpen !== true} style={{ margin: 0, padding: 0, border: 0, display: "grid", gap: 14 }}>
           <label>
             表示名
             <input name="display_name" required maxLength={120} />
@@ -134,7 +134,7 @@ export default function AuditionForm() {
             <input type="checkbox" name="consent_advice" />
             不合格時のアドバイスを希望する
           </label>
-          <button className="btn primary" type="submit" disabled={loading || !isOpen || !isLoggedIn}>
+          <button className="btn primary" type="submit" disabled={loading || isOpen !== true || !isLoggedIn}>
             {loading ? "送信中..." : "申請する"}
           </button>
         </fieldset>

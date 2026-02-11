@@ -4,12 +4,13 @@ import Link from "next/link";
 import { useEffect, useState, type MouseEvent } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 export function SiteNav({ mobile }: { mobile?: boolean } = {}) {
   const supabase = createSupabaseBrowserClient();
   const adminEmail = (process.env.NEXT_PUBLIC_ADMIN_EMAIL || "bonnedits852@gmail.com").toLowerCase();
   const router = useRouter();
+  const pathname = usePathname();
   const [loggedIn, setLoggedIn] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
 
@@ -108,33 +109,37 @@ export function SiteNav({ mobile }: { mobile?: boolean } = {}) {
     router.push("/admin");
   }
 
+  function navClass(match: (path: string) => boolean) {
+    return `nav-link${match(pathname) ? " active" : ""}`;
+  }
+
   return (
     <nav className={`nav site-nav${mobile ? " mobile-bottom-nav" : ""}`}>
-      <Link href="/members" className="nav-link" aria-label="メンバー">
+      <Link href="/members" className={navClass((p) => p.startsWith("/members"))} aria-label="メンバー">
         <span className="nav-icon" aria-hidden="true">
           <Image src="/icons/team.png" alt="" width={22} height={22} />
         </span>
         <span className="nav-text">メンバー</span>
       </Link>
-      <Link href="/rankings" className="nav-link" aria-label="ランキング">
+      <Link href="/rankings" className={navClass((p) => p.startsWith("/rankings"))} aria-label="ランキング">
         <span className="nav-icon" aria-hidden="true">
           <Image src="/icons/crown.png" alt="" width={22} height={22} />
         </span>
         <span className="nav-text">ランキング</span>
       </Link>
-      <Link href="/auditions" className="nav-link" aria-label="審査">
+      <Link href="/auditions" className={navClass((p) => p.startsWith("/auditions"))} aria-label="審査">
         <span className="nav-icon" aria-hidden="true">
           <Image src="/icons/audition.png" alt="" width={22} height={22} />
         </span>
         <span className="nav-text">審査</span>
       </Link>
-      <Link href="/learn/ae" className="nav-link" aria-label="AE学習">
+      <Link href="/learn/ae" className={navClass((p) => p.startsWith("/learn/ae"))} aria-label="AE学習">
         <span className="nav-icon" aria-hidden="true">
           <Image src="/icons/learn.png" alt="" width={22} height={22} />
         </span>
         <span className="nav-text">AE学習</span>
       </Link>
-      <Link href="/contact" className="nav-link" aria-label="お問い合わせ">
+      <Link href="/contact" className={navClass((p) => p.startsWith("/contact"))} aria-label="お問い合わせ">
         <span className="nav-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M4 5h16a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H8l-4 3V7a2 2 0 0 1 2-2z" />
@@ -144,7 +149,7 @@ export function SiteNav({ mobile }: { mobile?: boolean } = {}) {
       </Link>
       {!loggedIn ? (
         <>
-          <Link href="/auth/login" className="nav-link" aria-label="ログイン">
+          <Link href="/auth/login" className={navClass((p) => p.startsWith("/auth/login"))} aria-label="ログイン">
             <span className="nav-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M10 17v-2H4V9h6V7L15 12l-5 5z" />
@@ -153,7 +158,7 @@ export function SiteNav({ mobile }: { mobile?: boolean } = {}) {
             </span>
             <span className="nav-text">ログイン</span>
           </Link>
-          <Link href="/auth/register" className="nav-link" aria-label="新規登録">
+          <Link href="/auth/register" className={navClass((p) => p.startsWith("/auth/register"))} aria-label="新規登録">
             <span className="nav-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M7 14c-2.2 0-4 1.6-4 3.5V20h8v-2.5C11 15.6 9.2 14 7 14z" />
@@ -166,7 +171,7 @@ export function SiteNav({ mobile }: { mobile?: boolean } = {}) {
         </>
       ) : null}
       {loggedIn ? (
-        <Link href="/account" className="nav-link" aria-label="アカウント">
+        <Link href="/account" className={navClass((p) => p.startsWith("/account"))} aria-label="アカウント">
           <span className="nav-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <circle cx="12" cy="8" r="4" />
@@ -177,7 +182,7 @@ export function SiteNav({ mobile }: { mobile?: boolean } = {}) {
         </Link>
       ) : null}
       {isAdmin ? (
-        <Link href="/admin" className="nav-link" aria-label="管理" onClick={openAdmin}>
+        <Link href="/admin" className={navClass((p) => p.startsWith("/admin"))} aria-label="管理" onClick={openAdmin}>
           <span className="nav-icon" aria-hidden="true">
             <Image src="/icons/admin.png" alt="" width={22} height={22} />
           </span>

@@ -719,4 +719,23 @@ textarea {
   .member-work-head {
     align-items: stretch;
   }
+
+  .admin-actions {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+  }
+
+  .admin-actions .btn {
+    width: 100%;
+  }
+
+  .admin-row {
+    align-items: stretch;
+  }
+
+  .admin-row > .btn {
+    width: 100%;
+  }
 }

@@ -250,7 +250,7 @@ export default function AdminAuditionsPage() {
                 </td>
                 <td>{toStatusLabel(item.status)}</td>
                 <td>
-                  <div className="split">
+                  <div className="split admin-actions">
                     <button className="btn" type="button" onClick={() => review(item.id, "approved")}>
                       合格
                     </button>
@@ -283,7 +283,7 @@ export default function AdminAuditionsPage() {
         <h2>回次結果一覧</h2>
         {!batches.length ? <p className="meta">回次データがありません。</p> : null}
         {batches.map((b) => (
-          <div key={b.id} className="split card">
+          <div key={b.id} className="split card admin-row">
             <div className="stack">
               <strong>{b.title}</strong>
               <span className="meta">

@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { getMemberById, getRankings } from "@/lib/queries";
 import { toDayDiff } from "@/lib/utils";
@@ -28,13 +28,28 @@ function embedUrl(url: string) {
   }
 }
 
-export default async function MemberDetailPage({ params }: { params: Promise<{ memberId: string }> }) {
+export default async function MemberDetailPage({
+  params,
+  searchParams
+}: {
+  params: Promise<{ memberId: string }>;
+  searchParams?: Promise<{ page?: string }>;
+}) {
   const { memberId } = await params;
+  const query = (await searchParams) || {};
+  const page = Math.max(1, Number(query.page || 1) || 1);
+  const pageSize = 3;
   const data = await getMemberById(memberId);
   if (!data) notFound();
 
   const allRank = await getRankings("all", 1);
   const isTop = allRank[0]?.member_id === data.member.id;
+
+  const totalPages = Math.max(1, Math.ceil(data.links.length / pageSize));
+  if (page > totalPages) {
+    redirect(`/members/${memberId}?page=${totalPages}`);
+  }
+  const pagedLinks = data.links.slice((page - 1) * pageSize, page * pageSize);
 
   return (
     <div className="stack member-detail-page">
@@ -80,10 +95,10 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ m
       <section className="card stack member-works-section">
         <div className="split">
           <h2>作品一覧</h2>
-          <span className="meta">{data.links.length}件</span>
+          <span className="meta">{data.links.length}件 / {page}ページ目</span>
         </div>
         {!data.links.length ? <p className="meta">作品リンクはまだありません。</p> : null}
-        {data.links.map((link) => {
+        {pagedLinks.map((link) => {
           const embed = embedUrl(link.url);
           return (
             <article key={link.id} className="member-work-card">
@@ -109,6 +124,31 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ m
             </article>
           );
         })}
+        {data.links.length > pageSize ? (
+          <section className="pager">
+            {page > 1 ? (
+              <Link href={`/members/${memberId}?page=${page - 1}`} className="btn">
+                前へ
+              </Link>
+            ) : (
+              <button className="btn" type="button" disabled>
+                前へ
+              </button>
+            )}
+            <span className="meta">
+              {page} / {totalPages}
+            </span>
+            {page < totalPages ? (
+              <Link href={`/members/${memberId}?page=${page + 1}`} className="btn">
+                次へ
+              </Link>
+            ) : (
+              <button className="btn" type="button" disabled>
+                次へ
+              </button>
+            )}
+          </section>
+        ) : null}
       </section>
     </div>
   );

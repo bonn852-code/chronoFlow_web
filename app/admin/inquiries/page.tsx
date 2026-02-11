@@ -64,7 +64,7 @@ export default function AdminInquiriesPage() {
         {!items.length ? <p className="meta">未対応のお問い合わせはありません。</p> : null}
         {items.map((item) => (
           <article key={item.id} className="card stack">
-            <div className="split">
+            <div className="split admin-actions">
               <strong>{item.subject}</strong>
               <button className="btn danger" type="button" onClick={() => resolveAndDelete(item.id)}>
                 対応済みで削除
@@ -92,4 +92,3 @@ export default function AdminInquiriesPage() {
     </div>
   );
 }
-

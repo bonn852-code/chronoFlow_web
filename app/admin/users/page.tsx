@@ -101,7 +101,7 @@ export default function AdminUsersPage() {
                 <td>{u.lastSignInAt ? new Date(u.lastSignInAt).toLocaleString("ja-JP") : "-"}</td>
                 <td>{u.suspended ? "停止中" : "有効"}</td>
                 <td>
-                  <div className="split">
+                  <div className="split admin-actions">
                     <button className="btn" type="button" onClick={() => changeSuspend(u.id, !u.suspended)}>
                       {u.suspended ? "停止解除" : "停止"}
                     </button>
@@ -130,4 +130,3 @@ export default function AdminUsersPage() {
     </div>
   );
 }
-

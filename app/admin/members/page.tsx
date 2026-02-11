@@ -185,7 +185,7 @@ export default function AdminMembersPage() {
               <p className="meta">状態: {member.is_active ? "active" : "inactive"}</p>
               <p className="meta">portal: /portal/{member.portal_token}</p>
             </div>
-            <div className="split">
+            <div className="split admin-actions">
               <button className="btn" type="button" onClick={() => addLink(member.id)}>
                 作品リンク追加
               </button>
@@ -203,7 +203,7 @@ export default function AdminMembersPage() {
 
           <div className="card stack">
             <strong>アイコン設定（円形）</strong>
-            <div className="split">
+            <div className="split admin-actions">
               <MemberAvatar
                 name={member.display_name}
                 iconUrl={iconDrafts[member.id]?.iconUrl || ""}
@@ -266,7 +266,7 @@ export default function AdminMembersPage() {
                 </label>
               </div>
             </div>
-            <div className="split">
+              <div className="split admin-actions">
               <button className="btn" type="button" onClick={() => saveIcon(member.id)}>
                 アイコン保存
               </button>
