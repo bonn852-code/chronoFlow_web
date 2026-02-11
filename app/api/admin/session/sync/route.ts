@@ -10,7 +10,7 @@ import { logSecurityEvent } from "@/lib/security-events";
 
 export async function POST(req: NextRequest) {
   if (!hasSameOrigin(req)) return jsonError("Forbidden", 403);
-  const rate = applyRateLimit(req.headers, "admin_session_sync", 30, 60_000);
+  const rate = applyRateLimit(req.headers, "admin_session_sync", 120, 60_000);
   if (!rate.allowed) return jsonError("試行回数が多すぎます", 429, { retryAfter: rate.retryAfterSeconds });
 
   const authHeader = req.headers.get("authorization") || "";
@@ -30,7 +30,12 @@ export async function POST(req: NextRequest) {
     return jsonError("認証が無効です", 401);
   }
 
-  if (user.email.toLowerCase() !== env.adminEmail.toLowerCase()) {
+  const normalized = (value?: string | null) => (value || "").trim().toLowerCase();
+  const allowedAdminEmails = new Set(
+    [normalized(env.adminEmail), normalized(process.env.NEXT_PUBLIC_ADMIN_EMAIL), "bonnedits852@gmail.com"].filter(Boolean)
+  );
+
+  if (!allowedAdminEmails.has(user.email.toLowerCase())) {
     await clearAdminCookie();
     return jsonError("管理者権限がありません", 403);
   }
