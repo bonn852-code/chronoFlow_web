@@ -23,6 +23,7 @@ body {
   padding: 0;
   margin: 0;
   min-height: 100%;
+  overflow-x: hidden;
 }
 
 body {
@@ -245,6 +246,10 @@ main {
   gap: 14px;
 }
 
+.grid > * {
+  min-width: 0;
+}
+
 .grid-3 {
   grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
 }
@@ -264,6 +269,7 @@ main {
   background: linear-gradient(180deg, var(--panel-strong), var(--panel));
   box-shadow: var(--shadow);
   animation: rise 260ms ease;
+  min-width: 0;
 }
 
 .account-shell {
@@ -421,6 +427,10 @@ textarea {
   flex-wrap: wrap;
 }
 
+.split > * {
+  min-width: 0;
+}
+
 .notice {
   border-left: 3px solid var(--accent);
   padding-left: 10px;
@@ -460,6 +470,7 @@ textarea {
   background: #fff;
   border-radius: 14px;
   overflow: hidden;
+  table-layout: fixed;
 }
 
 .table th,
@@ -468,6 +479,8 @@ textarea {
   padding: 11px;
   border-bottom: 1px solid rgba(36, 74, 128, 0.09);
   vertical-align: top;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .table thead th {
@@ -559,6 +572,12 @@ textarea {
   aspect-ratio: 16 / 9;
   border: 0;
   border-radius: 12px;
+}
+
+img,
+video,
+iframe {
+  max-width: 100%;
 }
 
 .platform-youtube {
@@ -719,11 +738,34 @@ textarea {
   }
 
   .split {
+    flex-direction: column;
+    align-items: stretch;
     gap: 8px;
+  }
+
+  .split > .btn,
+  .split > a.btn,
+  .split > button {
+    width: 100%;
   }
 
   .btn {
     min-height: 40px;
+  }
+
+  .table {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+    border-radius: 12px;
+  }
+
+  .table thead,
+  .table tbody {
+    white-space: nowrap;
   }
 
   .home-members-grid {
