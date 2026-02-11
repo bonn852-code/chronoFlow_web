@@ -13,6 +13,7 @@ export default function AuditionForm() {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [viewerUserId, setViewerUserId] = useState<string | null>(null);
   const [periodText, setPeriodText] = useState<string>("");
+  const [submitStatus, setSubmitStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
 
   useEffect(() => {
     async function loadPeriod() {
@@ -73,17 +74,21 @@ export default function AuditionForm() {
   async function onSubmit(formData: FormData) {
     if (isOpen === false) {
       setMessage("現在は募集期間外のため申請できません。募集開始までお待ちください。");
+      setSubmitStatus("error");
       return;
     }
 
     if (!isLoggedIn) {
       setMessage("審査申請にはログインが必要です。先にログインしてください。");
+      setSubmitStatus("error");
       return;
     }
 
     setLoading(true);
-    setMessage(null);
+    setMessage("申請送信を開始しました。数秒お待ちください。");
+    setSubmitStatus("submitting");
     setApplicationCode(null);
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
     const snsRaw = (formData.get("sns_urls") as string)
       .split("\n")
@@ -114,6 +119,7 @@ export default function AuditionForm() {
 
       if (!response.ok) {
         setMessage(data.error || "送信に失敗しました");
+        setSubmitStatus("error");
         return;
       }
 
@@ -137,11 +143,15 @@ export default function AuditionForm() {
           // noop
         }
       }
-      if (!data.applicationCode) {
-        setMessage("申請を受け付けました。アドバイス希望をONにした方のみ申請コードが発行されます。");
-      }
+      setMessage(
+        data.applicationCode
+          ? "申請を受け付けました。下の申請コードを保存してください。"
+          : "申請を受け付けました。アドバイス希望をONにした方のみ申請コードが発行されます。"
+      );
+      setSubmitStatus("success");
     } catch {
       setMessage("通信エラーが発生しました");
+      setSubmitStatus("error");
     } finally {
       setLoading(false);
     }
@@ -189,6 +199,31 @@ export default function AuditionForm() {
         </fieldset>
       </form>
 
+      {message ? (
+        <div
+          className={`submit-feedback ${
+            submitStatus === "success"
+              ? "submit-feedback-success"
+              : submitStatus === "submitting"
+                ? "submit-feedback-pending"
+                : submitStatus === "error"
+                  ? "submit-feedback-error"
+                  : ""
+          }`}
+        >
+          <strong>
+            {submitStatus === "success"
+              ? "申請送信が完了しました"
+              : submitStatus === "submitting"
+                ? "送信処理中です"
+                : submitStatus === "error"
+                  ? "送信できませんでした"
+                  : "お知らせ"}
+          </strong>
+          <p>{message}</p>
+        </div>
+      ) : null}
+
       {applicationCode ? (
         <div className="card">
           <p>申請コード</p>
@@ -198,7 +233,6 @@ export default function AuditionForm() {
           <p className="meta">不合格時アドバイスの確認に必要です（本人のみ）。</p>
         </div>
       ) : null}
-      {message ? <p className="meta">{message}</p> : null}
     </div>
   );
 }

@@ -515,6 +515,41 @@ textarea {
   font-size: 1.2rem;
 }
 
+.submit-feedback {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.94);
+  display: grid;
+  gap: 4px;
+}
+
+.submit-feedback strong {
+  font-size: 1rem;
+}
+
+.submit-feedback p {
+  margin: 0;
+}
+
+.submit-feedback-pending {
+  border-color: rgba(26, 169, 255, 0.38);
+  background: linear-gradient(130deg, rgba(26, 169, 255, 0.2), rgba(53, 215, 160, 0.14));
+  color: #0f365f;
+}
+
+.submit-feedback-success {
+  border-color: rgba(25, 190, 132, 0.42);
+  background: linear-gradient(130deg, rgba(25, 190, 132, 0.2), rgba(53, 215, 160, 0.16));
+  color: #11553b;
+}
+
+.submit-feedback-error {
+  border-color: rgba(255, 94, 115, 0.4);
+  background: linear-gradient(130deg, rgba(255, 94, 115, 0.2), rgba(255, 160, 120, 0.16));
+  color: #7f1d2f;
+}
+
 .table {
   width: 100%;
   border-collapse: collapse;
