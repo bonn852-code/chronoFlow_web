@@ -1,12 +1,17 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import Link from "next/link";
+import Image from "next/image";
 import { env } from "@/lib/env";
 import { SiteNav } from "@/components/site-nav";
 
 export const metadata: Metadata = {
   title: `${env.siteName} Web`,
-  description: "ChronoFlow 公式サイト"
+  description: "ChronoFlow 公式サイト",
+  icons: {
+    icon: "/brand/chronoflow-logo.png",
+    apple: "/brand/chronoflow-logo.png"
+  }
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -16,7 +21,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <header className="site-header">
           <div className="container site-header-inner">
             <Link href="/" className="brand">
-              {env.siteName}
+              <Image
+                src="/brand/chronoflow-logo.png"
+                alt={`${env.siteName} ロゴ`}
+                width={180}
+                height={38}
+                priority
+                className="brand-logo"
+              />
             </Link>
             <Link href="/account" className="account-fab" aria-label="アカウント">
               A
@@ -25,6 +37,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </div>
         </header>
         <main className="container">{children}</main>
+        <footer className="site-footer">
+          <div className="container site-footer-inner">
+            <Link href="/" className="footer-brand" aria-label={`${env.siteName} トップへ`}>
+              <Image src="/brand/chronoflow-logo.png" alt="" width={148} height={30} className="footer-logo" />
+            </Link>
+            <p className="meta">© {new Date().getFullYear()} {env.siteName}</p>
+          </div>
+        </footer>
         <SiteNav mobile />
       </body>
     </html>

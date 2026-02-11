@@ -93,19 +93,19 @@ a {
 .brand {
   display: inline-flex;
   align-items: center;
-  gap: 9px;
-  font-size: 1.14rem;
-  font-weight: 800;
-  letter-spacing: 0.03em;
+  border-radius: 10px;
+  padding: 4px 6px;
+  transition: background 160ms ease;
 }
 
-.brand::before {
-  content: "";
-  width: 10px;
-  height: 10px;
-  border-radius: 999px;
-  background: linear-gradient(150deg, var(--accent), var(--accent-2));
-  box-shadow: 0 0 0 5px rgba(26, 169, 255, 0.17);
+.brand:hover {
+  background: rgba(26, 169, 255, 0.08);
+}
+
+.brand-logo {
+  width: clamp(148px, 17vw, 190px);
+  height: auto;
+  object-fit: contain;
 }
 
 .nav {
@@ -153,6 +153,35 @@ a {
 
 main {
   padding: 32px 0 48px;
+}
+
+.site-footer {
+  margin-top: 10px;
+  padding: 14px 0 20px;
+  border-top: 1px solid var(--line);
+  background: rgba(244, 249, 255, 0.68);
+  backdrop-filter: blur(10px);
+}
+
+.site-footer-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.footer-brand {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 10px;
+  padding: 2px 4px;
+}
+
+.footer-logo {
+  width: clamp(128px, 13vw, 156px);
+  height: auto;
+  object-fit: contain;
+  opacity: 0.96;
 }
 
 .section {
@@ -533,7 +562,7 @@ textarea {
   }
 
   .site-header .brand {
-    font-size: 1rem;
+    padding: 0;
   }
 
   .account-fab {
@@ -606,6 +635,25 @@ textarea {
   main {
     padding-top: 16px;
     padding-bottom: 120px;
+  }
+
+  .brand-logo {
+    width: 142px;
+  }
+
+  .site-footer {
+    padding: 12px 0 calc(env(safe-area-inset-bottom) + 78px);
+  }
+
+  .site-footer-inner {
+    justify-content: center;
+    text-align: center;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .footer-logo {
+    width: 132px;
   }
 
   .table th,
