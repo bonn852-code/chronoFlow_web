@@ -140,9 +140,7 @@ export function SiteNav({ mobile }: { mobile?: boolean } = {}) {
       </Link>
       <Link href="/contact" className={navClass((p) => p.startsWith("/contact"))} aria-label="お問い合わせ">
         <span className="nav-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M4 5h16a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H8l-4 3V7a2 2 0 0 1 2-2z" />
-          </svg>
+          <Image src="/icons/contact.png" alt="" width={22} height={22} />
         </span>
         <span className="nav-text">お問い合わせ</span>
       </Link>
@@ -150,20 +148,13 @@ export function SiteNav({ mobile }: { mobile?: boolean } = {}) {
         <>
           <Link href="/auth/login" className={navClass((p) => p.startsWith("/auth/login"))} aria-label="ログイン">
             <span className="nav-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M10 17v-2H4V9h6V7L15 12l-5 5z" />
-                <path d="M20 4h-8v2h8v12h-8v2h8a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z" />
-              </svg>
+              <Image src="/icons/login.png" alt="" width={22} height={22} />
             </span>
             <span className="nav-text">ログイン</span>
           </Link>
           <Link href="/auth/register" className={navClass((p) => p.startsWith("/auth/register"))} aria-label="新規登録">
             <span className="nav-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M7 14c-2.2 0-4 1.6-4 3.5V20h8v-2.5C11 15.6 9.2 14 7 14z" />
-                <circle cx="7" cy="7" r="3" />
-                <path d="M14 11h3V8h2v3h3v2h-3v3h-2v-3h-3z" />
-              </svg>
+              <Image src="/icons/register.png" alt="" width={22} height={22} />
             </span>
             <span className="nav-text">新規登録</span>
           </Link>
