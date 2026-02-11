@@ -2,12 +2,10 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 import Image from "next/image";
 
 export function SiteNav({ mobile }: { mobile?: boolean } = {}) {
-  const router = useRouter();
   const supabase = createSupabaseBrowserClient();
   const adminEmail = (process.env.NEXT_PUBLIC_ADMIN_EMAIL || "bonnedits852@gmail.com").toLowerCase();
   const [loggedIn, setLoggedIn] = useState(false);
@@ -51,12 +49,6 @@ export function SiteNav({ mobile }: { mobile?: boolean } = {}) {
       subscription.unsubscribe();
     };
   }, [adminEmail, supabase.auth]);
-
-  async function logout() {
-    await supabase.auth.signOut();
-    await fetch("/api/admin/session/clear", { method: "POST" });
-    router.refresh();
-  }
 
   return (
     <nav className={`nav site-nav${mobile ? " mobile-bottom-nav" : ""}`}>
