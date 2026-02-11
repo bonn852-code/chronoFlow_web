@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 
 export default function LoginPage() {
@@ -11,6 +11,9 @@ export default function LoginPage() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [slowNotice, setSlowNotice] = useState(false);
+  const inFlightRef = useRef(false);
+  const slowTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -21,17 +24,39 @@ export default function LoginPage() {
 
   async function syncAdminSession(token?: string) {
     if (!token) return;
-    await fetch("/api/admin/session/sync", {
+    const response = await fetch("/api/admin/session/sync", {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
       credentials: "same-origin",
       keepalive: true
     });
+    if (!response.ok) throw new Error("admin session sync failed");
+  }
+
+  function nextPath() {
+    if (typeof window === "undefined") return "/";
+    const raw = new URLSearchParams(window.location.search).get("next") || "/";
+    if (!raw.startsWith("/")) return "/";
+    return raw;
+  }
+
+  function beginSubmit() {
+    inFlightRef.current = true;
+    setLoading(true);
+    setError(null);
+    setSlowNotice(false);
+    slowTimer.current = setTimeout(() => setSlowNotice(true), 1200);
+  }
+
+  function endSubmit() {
+    if (slowTimer.current) clearTimeout(slowTimer.current);
+    inFlightRef.current = false;
+    setLoading(false);
   }
 
   async function onSubmit(formData: FormData) {
-    setLoading(true);
-    setError(null);
+    if (inFlightRef.current) return;
+    beginSubmit();
 
     const email = String(formData.get("email") || "").trim();
     const password = String(formData.get("password") || "");
@@ -44,7 +69,7 @@ export default function LoginPage() {
       } else {
         setError("ログインに失敗しました。メールアドレスかパスワードを確認してください。");
       }
-      setLoading(false);
+      endSubmit();
       return;
     }
 
@@ -68,13 +93,28 @@ export default function LoginPage() {
         await syncAdminSession(accessToken);
       } catch {
         setError("管理者セッションの同期に失敗しました。もう一度ログインしてください。");
-        setLoading(false);
+        endSubmit();
         return;
       }
     }
 
-    router.replace("/");
+    router.replace(nextPath() as never);
   }
+
+  useEffect(() => {
+    let mounted = true;
+    supabase.auth.getSession().then(async ({ data }) => {
+      if (!mounted || !data.session) return;
+      const email = data.session.user.email?.toLowerCase() || "";
+      if (email === adminEmail) {
+        await syncAdminSession(data.session.access_token).catch(() => undefined);
+      }
+      router.replace(nextPath() as never);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, [adminEmail, router, supabase.auth]);
 
   return (
     <section className="card stack" style={{ maxWidth: 480, margin: "30px auto" }}>
@@ -93,6 +133,7 @@ export default function LoginPage() {
         </button>
       </form>
       {error ? <p className="meta">{error}</p> : null}
+      {loading && slowNotice ? <p className="meta">処理に数秒かかる場合があります。ボタンは1回だけ押してお待ちください。</p> : null}
       <p className="meta">
         アカウントをお持ちでない場合は <Link href="/auth/register">新規登録</Link>
       </p>

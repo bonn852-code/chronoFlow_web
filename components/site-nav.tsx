@@ -104,9 +104,16 @@ export function SiteNav({ mobile }: { mobile?: boolean } = {}) {
       data: { session }
     } = await supabase.auth.getSession();
     if (session?.access_token) {
-      await syncAdminSession(session.access_token).catch(() => undefined);
+      try {
+        await syncAdminSession(session.access_token);
+        router.push("/admin");
+        return;
+      } catch {
+        router.push("/auth/login?next=/admin");
+        return;
+      }
     }
-    router.push("/admin");
+    router.push("/auth/login?next=/admin");
   }
 
   function navClass(match: (path: string) => boolean) {

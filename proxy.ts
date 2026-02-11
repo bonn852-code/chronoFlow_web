@@ -84,6 +84,7 @@ export async function proxy(req: NextRequest) {
 
   const url = req.nextUrl.clone();
   url.pathname = "/auth/login";
+  url.searchParams.set("next", pathname);
   return NextResponse.redirect(url);
 }
 
