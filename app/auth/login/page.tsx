@@ -34,6 +34,19 @@ export default function LoginPage() {
     if (!response.ok) throw new Error("admin session sync failed");
   }
 
+  async function ensureAdminSession(token?: string) {
+    if (!token) return false;
+    for (let i = 0; i < 3; i += 1) {
+      try {
+        await syncAdminSession(token);
+        return true;
+      } catch {
+        await new Promise((resolve) => setTimeout(resolve, 250));
+      }
+    }
+    return false;
+  }
+
   function nextPath() {
     if (typeof window === "undefined") return "/";
     const raw = new URLSearchParams(window.location.search).get("next") || "/";
@@ -90,35 +103,49 @@ export default function LoginPage() {
     }
 
     const accessToken = data.session?.access_token;
+    const target = nextPath();
+    const needsAdmin = target.startsWith("/admin");
     if (email.toLowerCase() === adminEmail && accessToken) {
-      let synced = false;
-      for (let i = 0; i < 2; i += 1) {
-        try {
-          await syncAdminSession(accessToken);
-          synced = true;
-          break;
-        } catch {
-          await new Promise((resolve) => setTimeout(resolve, 250));
-        }
-      }
+      const synced = await ensureAdminSession(accessToken);
       if (!synced) {
-        setWarning("管理者セッション同期が遅延しています。管理ページで再同期します。");
+        if (needsAdmin) {
+          setError("管理者セッションの同期に失敗しました。再度ログインしてください。");
+          endSubmit();
+          return;
+        }
+        setWarning("管理者セッション同期が遅延しています。通常ページへ移動します。");
       }
+    } else if (needsAdmin) {
+      setError("管理者ページへアクセスする権限がありません。");
+      endSubmit();
+      return;
     }
 
     endSubmit();
-    router.replace(nextPath() as never);
+    router.replace(target as never);
   }
 
   useEffect(() => {
     let mounted = true;
     supabase.auth.getSession().then(async ({ data }) => {
       if (!mounted || !data.session) return;
+      const target = nextPath();
+      const needsAdmin = target.startsWith("/admin");
       const email = data.session.user.email?.toLowerCase() || "";
-      if (email === adminEmail) {
-        await syncAdminSession(data.session.access_token).catch(() => undefined);
+      if (needsAdmin) {
+        if (email !== adminEmail) {
+          router.replace("/" as never);
+          return;
+        }
+        const synced = await ensureAdminSession(data.session.access_token);
+        if (!synced) {
+          setError("管理者セッションの同期に失敗しました。もう一度ログインしてください。");
+          return;
+        }
+      } else if (email === adminEmail) {
+        await ensureAdminSession(data.session.access_token).catch(() => undefined);
       }
-      router.replace(nextPath() as never);
+      router.replace(target as never);
     });
     return () => {
       mounted = false;
