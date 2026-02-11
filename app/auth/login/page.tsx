@@ -10,6 +10,7 @@ export default function LoginPage() {
   const adminEmail = (process.env.NEXT_PUBLIC_ADMIN_EMAIL || "bonnedits852@gmail.com").trim().toLowerCase();
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [slowNotice, setSlowNotice] = useState(false);
   const inFlightRef = useRef(false);
@@ -44,6 +45,7 @@ export default function LoginPage() {
     inFlightRef.current = true;
     setLoading(true);
     setError(null);
+    setWarning(null);
     setSlowNotice(false);
     slowTimer.current = setTimeout(() => setSlowNotice(true), 1200);
   }
@@ -82,22 +84,29 @@ export default function LoginPage() {
       if (statusData.suspended) {
         await supabase.auth.signOut();
         setError("このアカウントは現在停止中です。運営へお問い合わせください。");
-        setLoading(false);
+        endSubmit();
         return;
       }
     }
 
     const accessToken = data.session?.access_token;
     if (email.toLowerCase() === adminEmail && accessToken) {
-      try {
-        await syncAdminSession(accessToken);
-      } catch {
-        setError("管理者セッションの同期に失敗しました。もう一度ログインしてください。");
-        endSubmit();
-        return;
+      let synced = false;
+      for (let i = 0; i < 2; i += 1) {
+        try {
+          await syncAdminSession(accessToken);
+          synced = true;
+          break;
+        } catch {
+          await new Promise((resolve) => setTimeout(resolve, 250));
+        }
+      }
+      if (!synced) {
+        setWarning("管理者セッション同期が遅延しています。管理ページで再同期します。");
       }
     }
 
+    endSubmit();
     router.replace(nextPath() as never);
   }
 
@@ -133,6 +142,7 @@ export default function LoginPage() {
         </button>
       </form>
       {error ? <p className="meta">{error}</p> : null}
+      {warning ? <p className="meta">{warning}</p> : null}
       {loading && slowNotice ? <p className="meta">処理に数秒かかる場合があります。ボタンは1回だけ押してお待ちください。</p> : null}
       <p className="meta">
         アカウントをお持ちでない場合は <Link href="/auth/register">新規登録</Link>
