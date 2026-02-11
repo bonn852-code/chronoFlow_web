@@ -1,0 +1,92 @@
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { adminCookieName } from "@/lib/constants";
+import { verifyAdminSessionTokenEdge } from "@/lib/admin-auth-edge";
+
+const ADMIN_PATHS = ["/admin", "/api/admin"];
+
+function needsAdmin(pathname: string): boolean {
+  if (
+    pathname.startsWith("/admin/login") ||
+    pathname.startsWith("/api/admin/login") ||
+    pathname.startsWith("/api/admin/logout") ||
+    pathname.startsWith("/api/admin/session/sync") ||
+    pathname.startsWith("/api/admin/session/clear")
+  ) {
+    return false;
+  }
+  return ADMIN_PATHS.some((prefix) => pathname.startsWith(prefix));
+}
+
+export async function middleware(req: NextRequest) {
+  const { pathname } = req.nextUrl;
+  const method = req.method.toUpperCase();
+
+  const response = NextResponse.next();
+  response.headers.set("X-Frame-Options", "DENY");
+  response.headers.set("X-Content-Type-Options", "nosniff");
+  response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  response.headers.set("Cross-Origin-Opener-Policy", "same-origin");
+  response.headers.set("Cross-Origin-Resource-Policy", "same-site");
+  if (process.env.NODE_ENV === "production") {
+    response.headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");
+  }
+  response.headers.set(
+    "Content-Security-Policy",
+    [
+      "default-src 'self'",
+      "img-src 'self' data: https:",
+      "media-src 'self' https:",
+      "style-src 'self' 'unsafe-inline'",
+      "script-src 'self' 'unsafe-inline'",
+      "frame-src https://www.youtube.com https://www.youtube-nocookie.com",
+      "connect-src 'self' https:",
+      "base-uri 'self'",
+      "form-action 'self'",
+      "object-src 'none'",
+      "frame-ancestors 'none'"
+    ].join("; ")
+  );
+
+  if (!needsAdmin(pathname)) {
+    if (pathname.startsWith("/admin/login")) {
+      const loginKey = process.env.ADMIN_LOGIN_KEY;
+      const hasSession = Boolean(req.cookies.get(adminCookieName)?.value);
+      if (!hasSession && loginKey) {
+        const queryKey = req.nextUrl.searchParams.get("k");
+        if (queryKey !== loginKey) {
+          return NextResponse.rewrite(new URL("/not-found", req.url), { status: 404 });
+        }
+      }
+    }
+    return response;
+  }
+
+  if (pathname.startsWith("/api/admin") && method !== "GET") {
+    const origin = req.headers.get("origin");
+    if (!origin || origin !== req.nextUrl.origin) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+  }
+
+  const token = req.cookies.get(adminCookieName)?.value;
+  const secret = process.env.ADMIN_SESSION_SECRET || "";
+  const valid = token && secret ? await verifyAdminSessionTokenEdge(token, secret) : false;
+
+  if (valid) {
+    return response;
+  }
+
+  if (pathname.startsWith("/api/admin")) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const url = req.nextUrl.clone();
+  url.pathname = "/auth/login";
+  return NextResponse.redirect(url);
+}
+
+export const config = {
+  matcher: ["/admin/:path*", "/api/admin/:path*"]
+};
