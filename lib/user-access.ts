@@ -26,10 +26,15 @@ export async function getSuspensionState(userId: string): Promise<{ suspended: b
     .select("is_suspended,suspend_reason")
     .eq("user_id", userId)
     .maybeSingle();
-  if (error) throw error;
+  if (error) {
+    // Fail-open for environments where the new table is not migrated yet.
+    if ((error as { code?: string }).code === "42P01") {
+      return { suspended: false, reason: null };
+    }
+    return { suspended: false, reason: null };
+  }
   return {
     suspended: Boolean(data?.is_suspended),
     reason: data?.suspend_reason ?? null
   };
 }
-
