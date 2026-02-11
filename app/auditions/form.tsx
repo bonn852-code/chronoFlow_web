@@ -8,7 +8,7 @@ export default function AuditionForm() {
   const [applicationCode, setApplicationCode] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [isOpen, setIsOpen] = useState<boolean>(true);
+  const [isOpen, setIsOpen] = useState<boolean>(false);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [periodText, setPeriodText] = useState<string>("");
 
@@ -46,6 +46,11 @@ export default function AuditionForm() {
   }, [supabase.auth]);
 
   async function onSubmit(formData: FormData) {
+    if (!isOpen) {
+      setMessage("現在は募集期間外のため申請できません。募集開始までお待ちください。");
+      return;
+    }
+
     if (!isLoggedIn) {
       setMessage("審査申請にはログインが必要です。先にログインしてください。");
       return;
@@ -97,34 +102,36 @@ export default function AuditionForm() {
 
   return (
     <div className="card stack">
-      <h1>Audition Apply</h1>
+      <h1>審査申請</h1>
       <p className="notice">申請期間: {periodText || "読み込み中..."}</p>
       <form action={onSubmit}>
-        <label>
-          表示名
-          <input name="display_name" required maxLength={120} />
-        </label>
-        <label>
-          審査用動画URL
-          <input name="video_url" required type="url" placeholder="https://..." />
-        </label>
-        <label>
-          SNS URL（任意・1行に1つ）
-          <textarea name="sns_urls" placeholder="https://tiktok.com/..." />
-        </label>
-        <label>
-          <input type="checkbox" name="consent_public_profile" required />
-          合格時に表示名/作品の掲載に同意する
-        </label>
-        <label>
-          <input type="checkbox" name="consent_advice" />
-          不合格時のアドバイスを希望する
-        </label>
-        <button className="btn primary" type="submit" disabled={loading || !isOpen || !isLoggedIn}>
-          {loading ? "送信中..." : "申請する"}
-        </button>
+        <fieldset disabled={loading || !isOpen} style={{ margin: 0, padding: 0, border: 0, display: "grid", gap: 14 }}>
+          <label>
+            表示名
+            <input name="display_name" required maxLength={120} />
+          </label>
+          <label>
+            審査用動画URL
+            <input name="video_url" required type="url" placeholder="https://..." />
+          </label>
+          <label>
+            SNS URL（任意・1行に1つ）
+            <textarea name="sns_urls" placeholder="https://tiktok.com/..." />
+          </label>
+          <label>
+            <input type="checkbox" name="consent_public_profile" required />
+            合格時に表示名/作品の掲載に同意する
+          </label>
+          <label>
+            <input type="checkbox" name="consent_advice" />
+            不合格時のアドバイスを希望する
+          </label>
+          <button className="btn primary" type="submit" disabled={loading || !isOpen || !isLoggedIn}>
+            {loading ? "送信中..." : "申請する"}
+          </button>
+        </fieldset>
       </form>
-      {!isOpen ? <p className="meta">現在は申請期間外です。管理者が設定した期間のみ申請できます。</p> : null}
+      {!isOpen ? <p className="meta">現在は募集期間外です。次回の募集開始までお待ちください。</p> : null}
       {!isLoggedIn ? (
         <p className="meta">審査申請にはログインが必要です。ログイン後に申請してください。</p>
       ) : null}

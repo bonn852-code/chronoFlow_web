@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
     const openAt = new Date(batch.apply_open_at).getTime();
     const closeAt = new Date(batch.apply_close_at).getTime();
     if (now < openAt || now > closeAt) {
-      return jsonError("現在は申請期間外です", 403, {
+      return jsonError("現在は募集期間外のため申請できません。募集開始までお待ちください。", 403, {
         applyOpenAt: batch.apply_open_at,
         applyCloseAt: batch.apply_close_at
       });
