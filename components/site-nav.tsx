@@ -11,6 +11,7 @@ export function SiteNav({ mobile }: { mobile?: boolean } = {}) {
   const adminEmail = (process.env.NEXT_PUBLIC_ADMIN_EMAIL || "bonnedits852@gmail.com").toLowerCase();
   const router = useRouter();
   const pathname = usePathname();
+  const [authReady, setAuthReady] = useState(false);
   const [loggedIn, setLoggedIn] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
 
@@ -50,6 +51,7 @@ export function SiteNav({ mobile }: { mobile?: boolean } = {}) {
         if (mounted) {
           setLoggedIn(false);
           setIsAdmin(false);
+          setAuthReady(true);
           await clearAdminSession().catch(() => undefined);
           router.replace("/auth/login?blocked=1");
         }
@@ -59,6 +61,7 @@ export function SiteNav({ mobile }: { mobile?: boolean } = {}) {
       const email = session?.user?.email?.toLowerCase() || "";
       const admin = email === adminEmail;
       setIsAdmin(admin);
+      setAuthReady(true);
       if (admin) {
         void syncAdminSession(session?.access_token).catch(() => undefined);
       } else if (session) {
@@ -77,6 +80,7 @@ export function SiteNav({ mobile }: { mobile?: boolean } = {}) {
         await supabase.auth.signOut();
         setLoggedIn(false);
         setIsAdmin(false);
+        setAuthReady(true);
         await clearAdminSession().catch(() => undefined);
         router.replace("/auth/login?blocked=1");
         return;
@@ -85,6 +89,7 @@ export function SiteNav({ mobile }: { mobile?: boolean } = {}) {
       const email = session?.user?.email?.toLowerCase() || "";
       const admin = email === adminEmail;
       setIsAdmin(admin);
+      setAuthReady(true);
       if (admin) {
         void syncAdminSession(session?.access_token).catch(() => undefined);
       } else {
@@ -154,7 +159,7 @@ export function SiteNav({ mobile }: { mobile?: boolean } = {}) {
         </span>
         <span className="nav-text">お問い合わせ</span>
       </Link>
-      {!loggedIn ? (
+      {authReady && !loggedIn ? (
         <>
           <Link href="/auth/login" className={navClass((p) => p.startsWith("/auth/login"))} aria-label="ログイン">
             <span className="nav-icon" aria-hidden="true">
@@ -177,7 +182,7 @@ export function SiteNav({ mobile }: { mobile?: boolean } = {}) {
           </Link>
         </>
       ) : null}
-      {loggedIn ? (
+      {authReady && loggedIn ? (
         <Link href="/account" className={navClass((p) => p.startsWith("/account"))} aria-label="アカウント">
           <span className="nav-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -188,7 +193,7 @@ export function SiteNav({ mobile }: { mobile?: boolean } = {}) {
           <span className="nav-text">アカウント</span>
         </Link>
       ) : null}
-      {isAdmin ? (
+      {authReady && isAdmin ? (
         <Link href="/admin" className={navClass((p) => p.startsWith("/admin"))} aria-label="管理" onClick={openAdmin}>
           <span className="nav-icon" aria-hidden="true">
             <Image src="/icons/admin.png" alt="" width={22} height={22} />
