@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 type Props = {
   name: string;
   iconUrl?: string | null;
@@ -10,6 +12,7 @@ export function MemberAvatar({ name, iconUrl, focusX = 50, focusY = 50, size = 5
   const style = {
     width: `${size}px`,
     height: `${size}px`,
+    position: "relative",
     borderRadius: "999px",
     overflow: "hidden",
     border: "1px solid rgba(26, 169, 255, 0.25)",
@@ -28,10 +31,13 @@ export function MemberAvatar({ name, iconUrl, focusX = 50, focusY = 50, size = 5
 
   return (
     <div style={style} aria-label={`${name} avatar`}>
-      <img
+      <Image
         src={iconUrl}
         alt={`${name} icon`}
-        style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `${focusX}% ${focusY}%` }}
+        fill
+        sizes={`${size}px`}
+        unoptimized
+        style={{ objectFit: "cover", objectPosition: `${focusX}% ${focusY}%` }}
       />
     </div>
   );

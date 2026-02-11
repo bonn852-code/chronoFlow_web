@@ -16,6 +16,15 @@ export default function RegisterPage() {
   const [confirmEmail, setConfirmEmail] = useState<string | null>(null);
   const [resending, setResending] = useState(false);
 
+  function syncAdminSession(token?: string) {
+    if (!token) return;
+    void fetch("/api/admin/session/sync", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      keepalive: true
+    });
+  }
+
   async function onSubmit(formData: FormData) {
     setLoading(true);
     setError(null);
@@ -60,15 +69,10 @@ export default function RegisterPage() {
 
     const accessToken = data.session?.access_token;
     if (email.toLowerCase() === adminEmail && accessToken) {
-      await fetch("/api/admin/session/sync", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${accessToken}` }
-      });
+      syncAdminSession(accessToken);
     }
 
-    router.push("/account");
-    router.refresh();
-    setLoading(false);
+    router.replace("/account");
   }
 
   async function resendConfirmation() {

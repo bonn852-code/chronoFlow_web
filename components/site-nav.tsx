@@ -24,24 +24,24 @@ export function SiteNav({ mobile }: { mobile?: boolean } = {}) {
 
   useEffect(() => {
     let mounted = true;
-    supabase.auth.getSession().then(async ({ data }) => {
+    supabase.auth.getSession().then(({ data }) => {
       const session = data.session;
       if (!mounted) return;
       setLoggedIn(Boolean(session));
       const email = session?.user?.email?.toLowerCase() || "";
       const admin = email === adminEmail;
       setIsAdmin(admin);
-      await syncAdminSession(admin ? session?.access_token : undefined);
+      void syncAdminSession(admin ? session?.access_token : undefined);
     });
 
     const {
       data: { subscription }
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       setLoggedIn(Boolean(session));
       const email = session?.user?.email?.toLowerCase() || "";
       const admin = email === adminEmail;
       setIsAdmin(admin);
-      await syncAdminSession(admin ? session?.access_token : undefined);
+      void syncAdminSession(admin ? session?.access_token : undefined);
     });
 
     return () => {

@@ -7,11 +7,7 @@ import { SiteNav } from "@/components/site-nav";
 
 export const metadata: Metadata = {
   title: `${env.siteName} Web`,
-  description: "ChronoFlow 公式サイト",
-  icons: {
-    icon: "/brand/chronoflow-logo.png",
-    apple: "/brand/chronoflow-logo.png"
-  }
+  description: "ChronoFlow 公式サイト"
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -16,6 +16,8 @@ export default function AccountPage() {
   const [error, setError] = useState<string | null>(null);
   const [deleteStep, setDeleteStep] = useState<Step>("idle");
   const [confirmWord, setConfirmWord] = useState("");
+  const [logoutLoading, setLogoutLoading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     async function init() {
@@ -33,12 +35,13 @@ export default function AccountPage() {
   }, [router, supabase.auth]);
 
   async function logout() {
+    setLogoutLoading(true);
     await supabase.auth.signOut();
-    router.push("/");
-    router.refresh();
+    router.replace("/");
   }
 
   async function deleteAccount(formData: FormData) {
+    if (deleting) return;
     setError(null);
     setMessage(null);
 
@@ -62,11 +65,13 @@ export default function AccountPage() {
       return;
     }
 
+    setDeleting(true);
     const {
       data: { session }
     } = await supabase.auth.getSession();
     if (!session?.access_token) {
       setError("再ログインしてください。");
+      setDeleting(false);
       return;
     }
 
@@ -82,13 +87,13 @@ export default function AccountPage() {
     const data = (await response.json()) as { error?: string };
     if (!response.ok) {
       setError(data.error || "アカウント削除に失敗しました。");
+      setDeleting(false);
       return;
     }
 
     await supabase.auth.signOut();
     setMessage("アカウントを削除しました。");
-    router.push("/");
-    router.refresh();
+    router.replace("/");
   }
 
   if (loading) {
@@ -115,8 +120,8 @@ export default function AccountPage() {
       <section className="card stack">
         <h2>ログアウト</h2>
         <p className="meta">この端末のログインを解除します。</p>
-        <button className="btn" type="button" onClick={logout}>
-          ログアウト
+        <button className="btn" type="button" onClick={logout} disabled={logoutLoading}>
+          {logoutLoading ? "ログアウト中..." : "ログアウト"}
         </button>
       </section>
 
@@ -139,7 +144,7 @@ export default function AccountPage() {
               </label>
             </>
           ) : null}
-          <button className="btn danger" type="submit">
+          <button className="btn danger" type="submit" disabled={deleting}>
             {deleteStep === "idle" ? "削除手続きへ" : deleteStep === "confirm1" ? "最終確認へ" : "アカウントを削除"}
           </button>
         </form>
