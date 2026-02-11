@@ -10,6 +10,7 @@ type AdviceResponse = {
 };
 
 export default function AuditionAdvicePage() {
+  const adviceCodeStorageKey = "cf_latest_advice_code";
   const [result, setResult] = useState<AdviceResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -41,6 +42,11 @@ export default function AuditionAdvicePage() {
       }
 
       setResult(data);
+      try {
+        localStorage.setItem(adviceCodeStorageKey, applicationCode);
+      } catch {
+        // noop
+      }
       const next = new URL(window.location.href);
       next.searchParams.set("code", applicationCode);
       window.history.replaceState(null, "", next.toString());
@@ -58,7 +64,14 @@ export default function AuditionAdvicePage() {
 
   useEffect(() => {
     const url = new URL(window.location.href);
-    const code = (url.searchParams.get("code") || "").trim();
+    const codeFromQuery = (url.searchParams.get("code") || "").trim();
+    let fallbackCode = "";
+    try {
+      fallbackCode = (localStorage.getItem(adviceCodeStorageKey) || "").trim();
+    } catch {
+      // noop
+    }
+    const code = codeFromQuery || fallbackCode;
     if (!code) return;
     setCodeInput(code);
     void lookup(code);

@@ -5,6 +5,7 @@ import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 
 export default function AuditionForm() {
   const supabase = createSupabaseBrowserClient();
+  const adviceCodeStorageKey = "cf_latest_advice_code";
   const [applicationCode, setApplicationCode] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -27,6 +28,15 @@ export default function AuditionForm() {
       }
     }
     void loadPeriod();
+  }, []);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(adviceCodeStorageKey);
+      if (saved) setApplicationCode(saved);
+    } catch {
+      // noop
+    }
   }, []);
 
   useEffect(() => {
@@ -93,6 +103,19 @@ export default function AuditionForm() {
       }
 
       setApplicationCode(data.applicationCode || null);
+      if (data.applicationCode) {
+        try {
+          localStorage.setItem(adviceCodeStorageKey, data.applicationCode);
+        } catch {
+          // noop
+        }
+      } else {
+        try {
+          localStorage.removeItem(adviceCodeStorageKey);
+        } catch {
+          // noop
+        }
+      }
       if (!data.applicationCode) {
         setMessage("申請を受け付けました。アドバイス希望をONにした方のみ申請コードが発行されます。");
       }
