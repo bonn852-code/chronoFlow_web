@@ -3,6 +3,7 @@ import { checkAdminRequest } from "@/lib/api-auth";
 import { getCurrentBatch } from "@/lib/auditions";
 import { jsonError, jsonOk } from "@/lib/http";
 import { supabaseAdmin } from "@/lib/supabase";
+import { getProfilesByUserIds } from "@/lib/profile";
 
 export async function GET(req: NextRequest) {
   if (!checkAdminRequest(req)) return jsonError("Unauthorized", 401);
@@ -49,13 +50,25 @@ export async function GET(req: NextRequest) {
     if (countErr) return jsonError("申請件数取得に失敗しました", 500);
     if (batchErr) return jsonError("回次一覧の取得に失敗しました", 500);
 
+    const applications = data || [];
+    const profileMap = await getProfilesByUserIds(
+      applications.map((item) => item.applied_by_user_id).filter((v): v is string => typeof v === "string" && v.length > 0)
+    );
+    const mergedApplications = applications.map((item) => {
+      const profile = item.applied_by_user_id ? profileMap.get(item.applied_by_user_id) : null;
+      return {
+        ...item,
+        display_name: profile?.display_name || item.display_name
+      };
+    });
+
     const counts = {
       pending: (data || []).filter((x) => x.status === "pending").length,
       approved: (data || []).filter((x) => x.status === "approved").length,
       rejected: (data || []).filter((x) => x.status === "rejected").length
     };
 
-    return jsonOk({ batch, applications: data || [], counts, batches: batches || [], total: count || 0, page, pageSize });
+    return jsonOk({ batch, applications: mergedApplications, counts, batches: batches || [], total: count || 0, page, pageSize });
   } catch {
     return jsonError("申請一覧の取得に失敗しました", 500);
   }

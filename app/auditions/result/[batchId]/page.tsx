@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase";
+import { getProfilesByUserIds } from "@/lib/profile";
 
 export const dynamic = "force-dynamic";
 
 type ResultItem = {
   id: string;
+  applied_by_user_id: string | null;
   display_name: string;
   status: "pending" | "approved" | "rejected";
   created_at: string;
@@ -57,13 +59,25 @@ export default async function BatchResultDetailPage({ params }: { params: Promis
 
   const { data, error } = await supabaseAdmin
     .from("audition_applications")
-    .select("id,display_name,status,created_at,reviewed_at")
+    .select("id,applied_by_user_id,display_name,status,created_at,reviewed_at")
     .eq("batch_id", batch.id)
     .order("created_at", { ascending: true });
 
   if (error) {
     return <section className="card">結果一覧の取得に失敗しました。</section>;
   }
+
+  const resultItems = (data || []) as ResultItem[];
+  const profileMap = await getProfilesByUserIds(
+    resultItems.map((item) => item.applied_by_user_id).filter((v): v is string => typeof v === "string" && v.length > 0)
+  );
+  const mergedResults = resultItems.map((item) => {
+    const profile = item.applied_by_user_id ? profileMap.get(item.applied_by_user_id) : null;
+    return {
+      ...item,
+      display_name: profile?.display_name || item.display_name
+    };
+  });
 
   return (
     <div className="stack">
@@ -85,7 +99,7 @@ export default async function BatchResultDetailPage({ params }: { params: Promis
             </tr>
           </thead>
           <tbody>
-            {(data as ResultItem[]).map((item) => (
+            {mergedResults.map((item) => (
               <tr key={item.id}>
                 <td>{item.display_name}</td>
                 <td>{toStatusLabel(item.status)}</td>
