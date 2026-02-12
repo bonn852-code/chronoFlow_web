@@ -38,19 +38,16 @@ export default function AccountPage() {
         return;
       }
       setEmail(session.user.email);
+      const metadataName = String(session.user.user_metadata?.display_name || "").trim();
+      if (metadataName) setDisplayName(metadataName);
+      setLoading(false);
 
-      const [statusRes, profileRes] = await Promise.all([
-        fetch("/api/me/status", {
+      void (async () => {
+        const statusRes = await fetch("/api/me/status", {
           headers: { Authorization: `Bearer ${session.access_token}` },
           credentials: "same-origin"
-        }),
-        fetch("/api/profile", {
-          headers: { Authorization: `Bearer ${session.access_token}` },
-          credentials: "same-origin"
-        })
-      ]);
-
-      if (statusRes.ok) {
+        });
+        if (!statusRes.ok) return;
         const statusData = (await statusRes.json()) as {
           suspended?: boolean;
           isMember?: boolean;
@@ -70,22 +67,7 @@ export default function AccountPage() {
           setIconFocusY(typeof statusData.profile.iconFocusY === "number" ? statusData.profile.iconFocusY : 50);
           setBio(statusData.profile.bio || "");
         }
-      }
-
-      if (profileRes.ok) {
-        const profileData = (await profileRes.json()) as {
-          profile?: { display_name?: string; icon_url?: string | null; icon_focus_x?: number; icon_focus_y?: number; bio?: string | null };
-        };
-        if (profileData.profile) {
-          setDisplayName(profileData.profile.display_name || "");
-          setIconUrl(profileData.profile.icon_url || "");
-          setIconFocusX(typeof profileData.profile.icon_focus_x === "number" ? profileData.profile.icon_focus_x : 50);
-          setIconFocusY(typeof profileData.profile.icon_focus_y === "number" ? profileData.profile.icon_focus_y : 50);
-          setBio(profileData.profile.bio || "");
-        }
-      }
-
-      setLoading(false);
+      })();
     }
     void init();
   }, [router, supabase.auth]);

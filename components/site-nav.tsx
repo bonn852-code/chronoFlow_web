@@ -29,8 +29,23 @@ export function SiteNav({ mobile }: { mobile?: boolean } = {}) {
     await fetch("/api/admin/session/clear", { method: "POST", credentials: "same-origin" });
   }
 
-  async function getUserStatus(sessionToken?: string) {
+  async function getUserStatus(sessionToken?: string, userId?: string) {
     if (!sessionToken) return { suspended: false, isMember: false };
+    const cacheKey = userId ? `cf_user_status:${userId}` : "";
+    if (cacheKey && typeof window !== "undefined") {
+      try {
+        const raw = sessionStorage.getItem(cacheKey);
+        if (raw) {
+          const parsed = JSON.parse(raw) as { expiresAt: number; suspended: boolean; isMember: boolean };
+          if (parsed.expiresAt > Date.now()) {
+            return { suspended: parsed.suspended, isMember: parsed.isMember };
+          }
+        }
+      } catch {
+        // ignore cache parse errors
+      }
+    }
+
     const res = await fetch("/api/me/status", {
       method: "GET",
       headers: { Authorization: `Bearer ${sessionToken}` },
@@ -38,7 +53,21 @@ export function SiteNav({ mobile }: { mobile?: boolean } = {}) {
     });
     if (!res.ok) return { suspended: false, isMember: false };
     const data = (await res.json()) as { suspended?: boolean; isMember?: boolean };
-    return { suspended: data.suspended === true, isMember: data.isMember === true };
+    const result = { suspended: data.suspended === true, isMember: data.isMember === true };
+    if (cacheKey && typeof window !== "undefined") {
+      try {
+        sessionStorage.setItem(
+          cacheKey,
+          JSON.stringify({
+            ...result,
+            expiresAt: Date.now() + 15_000
+          })
+        );
+      } catch {
+        // ignore cache write errors
+      }
+    }
+    return result;
   }
 
   useEffect(() => {
@@ -56,7 +85,7 @@ export function SiteNav({ mobile }: { mobile?: boolean } = {}) {
         void clearAdminSession().catch(() => undefined);
       }
 
-      const status = await getUserStatus(session?.access_token);
+      const status = await getUserStatus(session?.access_token, session?.user?.id);
       if (!mounted) return;
       if (status.suspended) {
         await supabase.auth.signOut();
@@ -90,6 +119,15 @@ export function SiteNav({ mobile }: { mobile?: boolean } = {}) {
       subscription.unsubscribe();
     };
   }, [adminEmail, supabase.auth, router]);
+
+  useEffect(() => {
+    const routes = ["/", "/members", "/rankings", "/auditions", "/learn/ae", "/contact", "/account", "/auth/login", "/auth/register"];
+    if (isMember) routes.push("/assets");
+    if (isAdmin) routes.push("/enter-admin", "/admin");
+    routes.forEach((path) => {
+      router.prefetch(path as never);
+    });
+  }, [isAdmin, isMember, router]);
 
   async function openAdmin(event: MouseEvent<HTMLAnchorElement>) {
     event.preventDefault();
