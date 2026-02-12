@@ -252,6 +252,10 @@ insert into storage.buckets (id, name, public, file_size_limit)
 values ('member-assets', 'member-assets', false, 52428800)
 on conflict (id) do nothing;
 
+insert into storage.buckets (id, name, public, file_size_limit)
+values ('profile-icons', 'profile-icons', true, 2097152)
+on conflict (id) do nothing;
+
 -- RLS
 alter table members enable row level security;
 alter table member_links enable row level security;

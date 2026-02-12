@@ -432,6 +432,12 @@ select {
   transition: border-color 120ms ease, box-shadow 120ms ease;
 }
 
+input[type="file"] {
+  border-style: dashed;
+  background: #f6f9ff;
+  cursor: pointer;
+}
+
 input:focus,
 textarea:focus,
 select:focus {

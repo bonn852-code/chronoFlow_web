@@ -27,6 +27,7 @@ export default function AccountPage() {
   const [iconFocusY, setIconFocusY] = useState(50);
   const [isMember, setIsMember] = useState(false);
   const [suspended, setSuspended] = useState(false);
+  const [iconUploading, setIconUploading] = useState(false);
 
   useEffect(() => {
     async function init() {
@@ -107,6 +108,42 @@ export default function AccountPage() {
     }
     setMessage("プロフィールを更新しました。公開表示にも反映されます。");
     setSavingProfile(false);
+  }
+
+  async function uploadIcon(file: File) {
+    setIconUploading(true);
+    setError(null);
+    setMessage(null);
+    const {
+      data: { session }
+    } = await supabase.auth.getSession();
+    if (!session?.access_token) {
+      setError("再ログインしてください。");
+      setIconUploading(false);
+      return;
+    }
+    const formData = new FormData();
+    formData.append("file", file);
+    const res = await fetch("/api/profile/icon", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${session.access_token}` },
+      credentials: "same-origin",
+      body: formData
+    });
+    const data = (await res.json()) as { iconUrl?: string; error?: string };
+    if (!res.ok) {
+      setError(data.error || "アイコンのアップロードに失敗しました。");
+      setIconUploading(false);
+      return;
+    }
+    setIconUrl(data.iconUrl || "");
+    setMessage("アイコンを更新しました。公開表示にも反映されます。");
+    setIconUploading(false);
+  }
+
+  async function clearIcon() {
+    setIconUrl("");
+    await saveProfile();
   }
 
   async function logout() {
@@ -204,9 +241,17 @@ export default function AccountPage() {
               <textarea value={bio} onChange={(e) => setBio(e.target.value)} maxLength={500} />
             </label>
             <label>
-              アイコン画像URL（任意）
-              <input value={iconUrl} onChange={(e) => setIconUrl(e.target.value)} placeholder="https://..." />
+              アイコン画像（任意）
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) void uploadIcon(file);
+                }}
+              />
             </label>
+            <p className="meta">PNG / JPG / WebP、2MBまで。スマホ・PCどちらでも選択できます。</p>
             <label>
               アイコン位置 X: {iconFocusX}%
               <input type="range" min={0} max={100} value={iconFocusX} onChange={(e) => setIconFocusX(Number(e.target.value))} />
@@ -218,6 +263,10 @@ export default function AccountPage() {
             <button className="btn primary" type="button" onClick={saveProfile} disabled={savingProfile}>
               {savingProfile ? "保存中..." : "プロフィールを保存"}
             </button>
+            <button className="btn" type="button" onClick={clearIcon} disabled={savingProfile || iconUploading}>
+              アイコンを削除
+            </button>
+            {iconUploading ? <p className="meta">アイコンをアップロード中です...</p> : null}
           </div>
         </div>
       </section>
