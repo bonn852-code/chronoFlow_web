@@ -1,5 +1,5 @@
 import { supabaseAdmin } from "@/lib/supabase";
-import { getProfilesByUserIds } from "@/lib/profile";
+import { getResolvedProfilesByUserIds } from "@/lib/profile";
 
 type RankingRow = {
   member_id: string;
@@ -12,10 +12,49 @@ type RankingRow = {
   };
 };
 
+type MemberWithUserRef = {
+  user_id?: string | null;
+  created_from_application_id?: string | null;
+};
+
+async function buildEffectiveUserIdMap<T extends MemberWithUserRef>(members: T[]): Promise<Map<number, string>> {
+  const map = new Map<number, string>();
+  const appIds: string[] = [];
+
+  members.forEach((member, index) => {
+    if (typeof member.user_id === "string" && member.user_id.length > 0) {
+      map.set(index, member.user_id);
+      return;
+    }
+    if (typeof member.created_from_application_id === "string" && member.created_from_application_id.length > 0) {
+      appIds.push(member.created_from_application_id);
+    }
+  });
+
+  if (!appIds.length) return map;
+
+  const { data } = await supabaseAdmin.from("audition_applications").select("id,applied_by_user_id").in("id", appIds);
+  const byAppId = new Map(
+    (data || [])
+      .filter((row) => typeof row.applied_by_user_id === "string" && row.applied_by_user_id.length > 0)
+      .map((row) => [row.id, row.applied_by_user_id as string])
+  );
+
+  members.forEach((member, index) => {
+    if (map.has(index)) return;
+    const appId = member.created_from_application_id;
+    if (!appId) return;
+    const userId = byAppId.get(appId);
+    if (userId) map.set(index, userId);
+  });
+
+  return map;
+}
+
 export async function getMembers(query?: string, limit = 100) {
   let q = supabaseAdmin
     .from("members")
-    .select("id,user_id,display_name,joined_at,is_active,icon_url,icon_focus_x,icon_focus_y,created_at")
+    .select("id,user_id,created_from_application_id,display_name,joined_at,is_active,icon_url,icon_focus_x,icon_focus_y,created_at")
     .eq("is_active", true)
     .order("joined_at", { ascending: true })
     .limit(limit);
@@ -41,9 +80,10 @@ export async function getMembers(query?: string, limit = 100) {
   }
   if (error) throw error;
   const members = data || [];
-  const profileMap = await getProfilesByUserIds(members.map((m) => m.user_id).filter(Boolean));
-  return members.map((m) => {
-    const profile = m.user_id ? profileMap.get(m.user_id) : null;
+  const userIdMap = await buildEffectiveUserIdMap(members);
+  const profileMap = await getResolvedProfilesByUserIds(Array.from(userIdMap.values()));
+  return members.map((m, index) => {
+    const profile = profileMap.get(userIdMap.get(index) || "");
     return {
       ...m,
       display_name: profile?.display_name || m.display_name,
@@ -63,7 +103,7 @@ export async function getMembersPaged(query = "", page = 1, pageSize = 7) {
   let countQuery = supabaseAdmin.from("members").select("*", { count: "exact", head: true }).eq("is_active", true);
   let dataQuery = supabaseAdmin
     .from("members")
-    .select("id,user_id,display_name,joined_at,is_active,icon_url,icon_focus_x,icon_focus_y,created_at")
+    .select("id,user_id,created_from_application_id,display_name,joined_at,is_active,icon_url,icon_focus_x,icon_focus_y,created_at")
     .eq("is_active", true)
     .order("joined_at", { ascending: true })
     .range(from, to);
@@ -91,9 +131,10 @@ export async function getMembersPaged(query = "", page = 1, pageSize = 7) {
   if (dataErr) throw dataErr;
 
   const members = data || [];
-  const profileMap = await getProfilesByUserIds(members.map((m) => m.user_id).filter(Boolean));
-  const merged = members.map((m) => {
-    const profile = m.user_id ? profileMap.get(m.user_id) : null;
+  const userIdMap = await buildEffectiveUserIdMap(members);
+  const profileMap = await getResolvedProfilesByUserIds(Array.from(userIdMap.values()));
+  const merged = members.map((m, index) => {
+    const profile = profileMap.get(userIdMap.get(index) || "");
     return {
       ...m,
       display_name: profile?.display_name || m.display_name,
@@ -114,7 +155,7 @@ export async function getMembersPaged(query = "", page = 1, pageSize = 7) {
 export async function getMemberById(memberId: string) {
   const { data: member, error: memberErr } = await supabaseAdmin
     .from("members")
-    .select("id,user_id,display_name,joined_at,is_active,icon_url,icon_focus_x,icon_focus_y,created_at")
+    .select("id,user_id,created_from_application_id,display_name,joined_at,is_active,icon_url,icon_focus_x,icon_focus_y,created_at")
     .eq("id", memberId)
     .eq("is_active", true)
     .maybeSingle();
@@ -151,9 +192,11 @@ export async function getMemberById(memberId: string) {
   if (!member) return null;
 
   let mergedMember = member;
-  if (member.user_id) {
-    const profileMap = await getProfilesByUserIds([member.user_id]);
-    const profile = profileMap.get(member.user_id);
+  const userIdMap = await buildEffectiveUserIdMap([member]);
+  const effectiveUserId = userIdMap.get(0);
+  if (effectiveUserId) {
+    const profileMap = await getResolvedProfilesByUserIds([effectiveUserId]);
+    const profile = profileMap.get(effectiveUserId);
     if (profile) {
       mergedMember = {
         ...member,
@@ -206,7 +249,7 @@ export async function getRankings(range: "all" | "30d", limit = 50, offset = 0) 
 
   const { data: members, error: membersError } = await supabaseAdmin
     .from("members")
-    .select("id,user_id,display_name,joined_at,is_active")
+    .select("id,user_id,created_from_application_id,display_name,joined_at,is_active")
     .in("id", memberIds)
     .eq("is_active", true);
   if (membersError && (membersError as { code?: string }).code === "42703") {
@@ -232,10 +275,11 @@ export async function getRankings(range: "all" | "30d", limit = 50, offset = 0) 
   }
   if (membersError) throw membersError;
 
-  const profileMap = await getProfilesByUserIds((members || []).map((m) => m.user_id).filter(Boolean));
+  const userIdMap = await buildEffectiveUserIdMap(members || []);
+  const profileMap = await getResolvedProfilesByUserIds(Array.from(userIdMap.values()));
   const memberMap = new Map(
-    (members || []).map((m) => {
-      const profile = m.user_id ? profileMap.get(m.user_id) : null;
+    (members || []).map((m, index) => {
+      const profile = profileMap.get(userIdMap.get(index) || "");
       return [
         m.id,
         {

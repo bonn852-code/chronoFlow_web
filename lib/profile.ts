@@ -77,3 +77,36 @@ export async function getProfilesByUserIds(
     ])
   );
 }
+
+export async function getResolvedProfilesByUserIds(
+  userIds: string[]
+): Promise<Map<string, { display_name: string; icon_url: string | null; icon_focus_x: number; icon_focus_y: number }>> {
+  const ids = Array.from(new Set(userIds.filter(Boolean)));
+  if (!ids.length) return new Map();
+
+  const resolved = await getProfilesByUserIds(ids);
+  const missing = ids.filter((id) => !resolved.has(id));
+  if (!missing.length) return resolved;
+
+  await Promise.all(
+    missing.map(async (userId) => {
+      const userRes = await supabaseAdmin.auth.admin.getUserById(userId);
+      const user = userRes.data?.user;
+      const name = safeText(user?.user_metadata?.display_name, 1, 120) || "メンバー";
+      const iconUrlRaw = typeof user?.user_metadata?.icon_url === "string" ? user.user_metadata.icon_url.trim() : "";
+      const iconUrl = iconUrlRaw || null;
+      const focusXRaw = Number(user?.user_metadata?.icon_focus_x);
+      const focusYRaw = Number(user?.user_metadata?.icon_focus_y);
+      const iconFocusX = Number.isFinite(focusXRaw) ? Math.min(100, Math.max(0, Math.round(focusXRaw))) : 50;
+      const iconFocusY = Number.isFinite(focusYRaw) ? Math.min(100, Math.max(0, Math.round(focusYRaw))) : 50;
+      resolved.set(userId, {
+        display_name: name,
+        icon_url: iconUrl,
+        icon_focus_x: iconFocusX,
+        icon_focus_y: iconFocusY
+      });
+    })
+  );
+
+  return resolved;
+}

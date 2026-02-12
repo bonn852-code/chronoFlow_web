@@ -61,5 +61,27 @@ export async function PATCH(req: NextRequest) {
     .single();
 
   if (error) return jsonError("プロフィール更新に失敗しました", 500);
+
+  await Promise.all([
+    supabaseAdmin.auth.admin.updateUserById(auth.user.id, {
+      user_metadata: {
+        display_name: displayName,
+        icon_url: iconUrl || null,
+        icon_focus_x: iconFocusX,
+        icon_focus_y: iconFocusY
+      }
+    }),
+    supabaseAdmin
+      .from("members")
+      .update({
+        display_name: displayName,
+        icon_url: iconUrl || null,
+        icon_focus_x: iconFocusX,
+        icon_focus_y: iconFocusY
+      })
+      .eq("user_id", auth.user.id),
+    supabaseAdmin.from("audition_applications").update({ display_name: displayName }).eq("applied_by_user_id", auth.user.id)
+  ]);
+
   return jsonOk({ profile: data });
 }

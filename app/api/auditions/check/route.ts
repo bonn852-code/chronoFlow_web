@@ -4,6 +4,7 @@ import { jsonError, jsonOk } from "@/lib/http";
 import { supabaseAdmin } from "@/lib/supabase";
 import { hasSameOrigin } from "@/lib/security";
 import { safeText } from "@/lib/utils";
+import { getResolvedProfilesByUserIds } from "@/lib/profile";
 
 export async function POST(req: NextRequest) {
   if (!hasSameOrigin(req)) return jsonError("Forbidden", 403);
@@ -17,7 +18,7 @@ export async function POST(req: NextRequest) {
 
   const { data, error } = await supabaseAdmin
     .from("audition_applications")
-    .select("status,advice_text,consent_advice,display_name,batch_id,audition_batches!inner(published_at)")
+    .select("status,advice_text,consent_advice,display_name,applied_by_user_id,batch_id,audition_batches!inner(published_at)")
     .eq("application_code", code.toUpperCase())
     .maybeSingle();
 
@@ -27,9 +28,13 @@ export async function POST(req: NextRequest) {
   const showAdvice = data.status === "rejected" && data.consent_advice;
   const batch = Array.isArray(data.audition_batches) ? data.audition_batches[0] : data.audition_batches;
 
+  const profileMap = await getResolvedProfilesByUserIds(
+    data.applied_by_user_id ? [data.applied_by_user_id] : []
+  );
+  const profile = data.applied_by_user_id ? profileMap.get(data.applied_by_user_id) : null;
   return jsonOk({
     status: data.status,
-    displayName: data.display_name,
+    displayName: profile?.display_name || data.display_name,
     publishedAt: batch?.published_at ?? null,
     adviceText: showAdvice ? data.advice_text : null
   });

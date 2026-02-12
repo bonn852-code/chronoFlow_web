@@ -3,7 +3,7 @@ import { checkAdminRequest } from "@/lib/api-auth";
 import { getCurrentBatch } from "@/lib/auditions";
 import { jsonError, jsonOk } from "@/lib/http";
 import { supabaseAdmin } from "@/lib/supabase";
-import { getProfilesByUserIds } from "@/lib/profile";
+import { getResolvedProfilesByUserIds } from "@/lib/profile";
 
 export async function GET(req: NextRequest) {
   if (!checkAdminRequest(req)) return jsonError("Unauthorized", 401);
@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
     if (batchErr) return jsonError("回次一覧の取得に失敗しました", 500);
 
     const applications = data || [];
-    const profileMap = await getProfilesByUserIds(
+    const profileMap = await getResolvedProfilesByUserIds(
       applications.map((item) => item.applied_by_user_id).filter((v): v is string => typeof v === "string" && v.length > 0)
     );
     const mergedApplications = applications.map((item) => {

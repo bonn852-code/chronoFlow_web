@@ -2,7 +2,7 @@ import { jsonError, jsonOk } from "@/lib/http";
 import { supabaseAdmin } from "@/lib/supabase";
 import { applyRateLimit } from "@/lib/rate-limit";
 import { NextRequest } from "next/server";
-import { getProfilesByUserIds } from "@/lib/profile";
+import { getResolvedProfilesByUserIds } from "@/lib/profile";
 
 export async function GET(req: NextRequest) {
   const rate = applyRateLimit(req.headers, "audition_results", 120, 60_000);
@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
     if (error) return jsonError("結果一覧の取得に失敗しました", 500);
 
     const items = data || [];
-    const profileMap = await getProfilesByUserIds(
+    const profileMap = await getResolvedProfilesByUserIds(
       items.map((item) => item.applied_by_user_id).filter((v): v is string => typeof v === "string" && v.length > 0)
     );
     const merged = items.map((item) => {

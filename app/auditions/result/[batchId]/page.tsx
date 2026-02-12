@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase";
-import { getProfilesByUserIds } from "@/lib/profile";
+import { getResolvedProfilesByUserIds } from "@/lib/profile";
 
 export const dynamic = "force-dynamic";
 
@@ -68,7 +68,7 @@ export default async function BatchResultDetailPage({ params }: { params: Promis
   }
 
   const resultItems = (data || []) as ResultItem[];
-  const profileMap = await getProfilesByUserIds(
+  const profileMap = await getResolvedProfilesByUserIds(
     resultItems.map((item) => item.applied_by_user_id).filter((v): v is string => typeof v === "string" && v.length > 0)
   );
   const mergedResults = resultItems.map((item) => {

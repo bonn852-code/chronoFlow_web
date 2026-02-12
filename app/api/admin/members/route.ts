@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { checkAdminRequest } from "@/lib/api-auth";
 import { jsonError, jsonOk } from "@/lib/http";
 import { supabaseAdmin } from "@/lib/supabase";
+import { getResolvedProfilesByUserIds } from "@/lib/profile";
 import { safeText } from "@/lib/utils";
 
 export async function GET(req: NextRequest) {
@@ -15,7 +16,7 @@ export async function GET(req: NextRequest) {
 
   let query = supabaseAdmin
     .from("members")
-    .select("id,display_name,joined_at,is_active,icon_url,icon_focus_x,icon_focus_y,portal_token,created_at")
+    .select("id,user_id,created_from_application_id,display_name,joined_at,is_active,icon_url,icon_focus_x,icon_focus_y,portal_token,created_at")
     .order("joined_at", { ascending: false })
     .range(from, to);
   let countQuery = supabaseAdmin.from("members").select("*", { count: "exact", head: true });
@@ -26,7 +27,43 @@ export async function GET(req: NextRequest) {
   const [{ data, error }, { count, error: countErr }] = await Promise.all([query, countQuery]);
   if (error) return jsonError("メンバー一覧取得に失敗しました", 500);
   if (countErr) return jsonError("メンバー件数取得に失敗しました", 500);
-  return jsonOk({ members: data || [], total: count || 0, page, pageSize });
+  const rows = data || [];
+
+  const missingUserAppIds = rows
+    .filter((m) => !m.user_id && typeof m.created_from_application_id === "string" && m.created_from_application_id.length > 0)
+    .map((m) => m.created_from_application_id as string);
+
+  let appUserMap = new Map<string, string>();
+  if (missingUserAppIds.length) {
+    const { data: appRows } = await supabaseAdmin
+      .from("audition_applications")
+      .select("id,applied_by_user_id")
+      .in("id", missingUserAppIds);
+    appUserMap = new Map(
+      (appRows || [])
+        .filter((row) => typeof row.applied_by_user_id === "string" && row.applied_by_user_id.length > 0)
+        .map((row) => [row.id, row.applied_by_user_id as string])
+    );
+  }
+
+  const effectiveUserIds = rows
+    .map((m) => m.user_id || (m.created_from_application_id ? appUserMap.get(m.created_from_application_id) : null))
+    .filter((v): v is string => typeof v === "string" && v.length > 0);
+  const profileMap = await getResolvedProfilesByUserIds(effectiveUserIds);
+
+  const members = rows.map((m) => {
+    const effectiveUserId = m.user_id || (m.created_from_application_id ? appUserMap.get(m.created_from_application_id) : null);
+    const profile = effectiveUserId ? profileMap.get(effectiveUserId) : null;
+    return {
+      ...m,
+      display_name: profile?.display_name || m.display_name,
+      icon_url: profile?.icon_url ?? m.icon_url,
+      icon_focus_x: profile?.icon_focus_x ?? m.icon_focus_x,
+      icon_focus_y: profile?.icon_focus_y ?? m.icon_focus_y
+    };
+  });
+
+  return jsonOk({ members, total: count || 0, page, pageSize });
 }
 
 export async function POST(req: NextRequest) {
