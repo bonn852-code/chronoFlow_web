@@ -5,6 +5,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { env } from "@/lib/env";
 import { isUuid, safeText } from "@/lib/utils";
 import { logSecurityEvent } from "@/lib/security-events";
+import { ensureUserProfile } from "@/lib/profile";
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   if (!checkAdminRequest(req)) return jsonError("Unauthorized", 401);
@@ -44,6 +45,47 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const { error } = await supabaseAdmin.from("user_account_controls").upsert(payload, { onConflict: "user_id" });
   if (error) return jsonError("ユーザー停止状態の更新に失敗しました", 500);
+
+  if (typeof body.isMember === "boolean") {
+    if (nextIsMember) {
+      const profile = await ensureUserProfile({ id: userData.user.id, user_metadata: userData.user.user_metadata || null });
+      const displayName =
+        profile?.display_name ||
+        safeText(userData.user.user_metadata?.display_name, 1, 120) ||
+        (userData.user.email ? userData.user.email.split("@")[0] : "") ||
+        "メンバー";
+
+      const existing = await supabaseAdmin
+        .from("members")
+        .select("id")
+        .eq("user_id", id)
+        .maybeSingle();
+
+      if (existing.data?.id) {
+        await supabaseAdmin
+          .from("members")
+          .update({
+            display_name: displayName,
+            is_active: true,
+            icon_url: profile?.icon_url ?? null,
+            icon_focus_x: profile?.icon_focus_x ?? 50,
+            icon_focus_y: profile?.icon_focus_y ?? 50
+          })
+          .eq("user_id", id);
+      } else {
+        await supabaseAdmin.from("members").insert({
+          user_id: id,
+          display_name: displayName,
+          is_active: true,
+          icon_url: profile?.icon_url ?? null,
+          icon_focus_x: profile?.icon_focus_x ?? 50,
+          icon_focus_y: profile?.icon_focus_y ?? 50
+        });
+      }
+    } else {
+      await supabaseAdmin.from("members").update({ is_active: false }).eq("user_id", id);
+    }
+  }
 
   await logSecurityEvent({
     eventType:
