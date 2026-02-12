@@ -50,11 +50,18 @@ export default function RegisterPage() {
     const formData = new FormData(event.currentTarget);
 
     const email = String(formData.get("email") || "").trim();
+    const displayName = String(formData.get("displayName") || "").trim();
     const password = String(formData.get("password") || "");
     const passwordConfirm = String(formData.get("passwordConfirm") || "");
 
     if (password !== passwordConfirm) {
       setError("確認用パスワードが一致しません。");
+      endSubmit();
+      return;
+    }
+
+    if (!displayName || displayName.length > 120) {
+      setError("表示名を1〜120文字で入力してください。");
       endSubmit();
       return;
     }
@@ -70,6 +77,7 @@ export default function RegisterPage() {
       email,
       password,
       options: {
+        data: { display_name: displayName },
         emailRedirectTo: `${window.location.origin}/auth/login`
       }
     });
@@ -97,11 +105,23 @@ export default function RegisterPage() {
     }
 
     const accessToken = data.session?.access_token;
+    if (accessToken) {
+      await fetch("/api/profile", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`
+        },
+        credentials: "same-origin",
+        body: JSON.stringify({ displayName })
+      }).catch(() => undefined);
+    }
     if (email.toLowerCase() === adminEmail && accessToken) {
       syncAdminSession(accessToken);
     }
 
     router.replace("/");
+    router.refresh();
   }
 
   async function resendConfirmation() {
@@ -128,6 +148,10 @@ export default function RegisterPage() {
       <h1>新規登録</h1>
       <form onSubmit={onSubmit}>
         <fieldset disabled={loading} style={{ margin: 0, padding: 0, border: 0, display: "grid", gap: 14 }}>
+          <label>
+            表示名（公開名）
+            <input name="displayName" required maxLength={120} />
+          </label>
           <label>
             メールアドレス
             <input name="email" type="email" required />

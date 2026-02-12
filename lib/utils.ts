@@ -53,6 +53,39 @@ export function platformFromUrl(url: string): "youtube" | "tiktok" | "instagram"
   return "other";
 }
 
+const auditionAllowedDomains = [
+  "youtube.com",
+  "www.youtube.com",
+  "m.youtube.com",
+  "youtu.be",
+  "tiktok.com",
+  "www.tiktok.com",
+  "m.tiktok.com",
+  "instagram.com",
+  "www.instagram.com"
+];
+
+function hostnameMatchesAllowed(hostname: string): boolean {
+  const lower = hostname.toLowerCase();
+  return auditionAllowedDomains.some((domain) => lower === domain || lower.endsWith(`.${domain}`));
+}
+
+export function isAllowedAuditionUrl(url: string): boolean {
+  if (!isValidUrl(url)) return false;
+  try {
+    const parsed = new URL(url);
+    return hostnameMatchesAllowed(parsed.hostname);
+  } catch {
+    return false;
+  }
+}
+
+export function hasSamePlatformSns(videoUrl: string, snsUrls: string[]): boolean {
+  const platform = platformFromUrl(videoUrl);
+  if (platform === "other") return true;
+  return snsUrls.some((url) => platformFromUrl(url) === platform);
+}
+
 export function classNames(...parts: Array<string | false | null | undefined>) {
   return parts.filter(Boolean).join(" ");
 }

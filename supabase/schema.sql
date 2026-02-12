@@ -2,6 +2,7 @@ create extension if not exists pgcrypto;
 
 create table if not exists members (
   id uuid primary key default gen_random_uuid(),
+  user_id uuid null,
   display_name text not null check (char_length(display_name) between 1 and 120),
   joined_at timestamptz not null default now(),
   is_active boolean not null default true,
@@ -16,6 +17,18 @@ create table if not exists members (
 alter table members add column if not exists icon_url text null;
 alter table members add column if not exists icon_focus_x int not null default 50;
 alter table members add column if not exists icon_focus_y int not null default 50;
+alter table members add column if not exists user_id uuid null;
+
+create table if not exists user_profiles (
+  user_id uuid primary key,
+  display_name text not null check (char_length(display_name) between 1 and 120),
+  bio text null check (bio is null or char_length(bio) <= 500),
+  icon_url text null,
+  icon_focus_x int not null default 50 check (icon_focus_x between 0 and 100),
+  icon_focus_y int not null default 50 check (icon_focus_y between 0 and 100),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
 
 create table if not exists member_links (
   id uuid primary key default gen_random_uuid(),
@@ -72,6 +85,14 @@ create table if not exists audition_applications (
   application_code text not null unique,
   created_at timestamptz not null default now(),
   reviewed_at timestamptz null
+);
+
+create table if not exists audition_resubmit_permissions (
+  batch_id uuid not null references audition_batches(id) on delete cascade,
+  user_id uuid not null,
+  granted_by_application_id uuid null references audition_applications(id) on delete set null,
+  granted_at timestamptz not null default now(),
+  primary key (batch_id, user_id)
 );
 
 alter table audition_applications add column if not exists applied_by_user_id uuid null;
@@ -154,6 +175,8 @@ create table if not exists security_events (
 );
 
 create index if not exists idx_members_active_joined on members(is_active, joined_at);
+create index if not exists idx_members_user_id on members(user_id);
+create index if not exists idx_user_profiles_display_name on user_profiles(display_name);
 create index if not exists idx_member_links_member_id on member_links(member_id);
 create index if not exists idx_reactions_member_created on reactions(member_id, created_at);
 create index if not exists idx_reactions_reacted_on on reactions(reacted_on);
@@ -165,6 +188,7 @@ create index if not exists idx_user_account_controls_suspended on user_account_c
 create index if not exists idx_contact_inquiries_created_at on contact_inquiries(created_at desc);
 create index if not exists idx_security_events_created_at on security_events(created_at desc);
 create index if not exists idx_security_events_event on security_events(event_type, created_at desc);
+create index if not exists idx_resubmit_permissions_user on audition_resubmit_permissions(user_id, granted_at desc);
 
 create or replace view view_member_reactions_all
 with (security_invoker = true) as
@@ -217,6 +241,13 @@ insert into audition_batches(title)
 select to_char(now(), 'YYYY Mon') || ' Audition'
 where not exists (select 1 from audition_batches);
 
+update members m
+set user_id = a.applied_by_user_id
+from audition_applications a
+where m.created_from_application_id = a.id
+  and m.user_id is null
+  and a.applied_by_user_id is not null;
+
 insert into storage.buckets (id, name, public, file_size_limit)
 values ('member-assets', 'member-assets', false, 52428800)
 on conflict (id) do nothing;
@@ -224,6 +255,7 @@ on conflict (id) do nothing;
 -- RLS
 alter table members enable row level security;
 alter table member_links enable row level security;
+alter table user_profiles enable row level security;
 alter table reactions enable row level security;
 alter table link_reactions enable row level security;
 alter table audition_batches enable row level security;
@@ -234,6 +266,7 @@ alter table announcements enable row level security;
 alter table user_account_controls enable row level security;
 alter table contact_inquiries enable row level security;
 alter table security_events enable row level security;
+alter table audition_resubmit_permissions enable row level security;
 
 drop policy if exists members_public_select on members;
 drop policy if exists member_links_public_select on member_links;
@@ -256,6 +289,7 @@ begin
       and tablename in (
         'members',
         'member_links',
+        'user_profiles',
         'reactions',
         'link_reactions',
         'audition_batches',
@@ -265,7 +299,8 @@ begin
         'announcements',
         'user_account_controls',
         'contact_inquiries',
-        'security_events'
+        'security_events',
+        'audition_resubmit_permissions'
       )
   loop
     execute format('drop policy if exists %I on public.%I', p.policyname, p.tablename);

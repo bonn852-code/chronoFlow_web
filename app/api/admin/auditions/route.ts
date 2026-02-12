@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
     let q = supabaseAdmin
       .from("audition_applications")
       .select(
-        "id,batch_id,display_name,video_url,sns_urls,consent_public_profile,consent_advice,status,advice_text,application_code,created_at,reviewed_at"
+        "id,batch_id,applied_by_user_id,display_name,video_url,sns_urls,consent_public_profile,consent_advice,status,advice_text,application_code,created_at,reviewed_at"
       )
       .eq("batch_id", batch.id)
       .order("created_at", { ascending: false })

@@ -63,20 +63,6 @@ export default function LoginPage() {
       return;
     }
 
-    const statusRes = await fetch("/api/me/status", {
-      headers: { Authorization: `Bearer ${data.session?.access_token || ""}` },
-      credentials: "same-origin"
-    });
-    if (statusRes.ok) {
-      const statusData = (await statusRes.json()) as { suspended?: boolean };
-      if (statusData.suspended) {
-        await supabase.auth.signOut();
-        setError("このアカウントは現在停止中です。運営へお問い合わせください。");
-        endSubmit();
-        return;
-      }
-    }
-
     const target = nextPath();
     const needsAdmin = target === "/enter-admin";
     if (needsAdmin && email.toLowerCase() !== adminEmail) {
@@ -87,6 +73,7 @@ export default function LoginPage() {
 
     endSubmit();
     router.replace(target as never);
+    router.refresh();
   }
 
   useEffect(() => {

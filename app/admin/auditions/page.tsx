@@ -7,6 +7,7 @@ import { AdminNav } from "@/components/admin-nav";
 
 type Application = {
   id: string;
+  applied_by_user_id: string | null;
   display_name: string;
   video_url: string;
   sns_urls: string[];
@@ -177,6 +178,16 @@ export default function AdminAuditionsPage() {
     router.refresh();
   }
 
+  async function allowResubmit(id: string) {
+    const res = await fetch(`/api/admin/auditions/${id}/allow-resubmit`, { method: "POST" });
+    const data = (await res.json()) as { error?: string };
+    if (!res.ok) {
+      setMessage(data.error || "再申請許可に失敗しました");
+      return;
+    }
+    setMessage("このユーザーに再申請を許可しました。次回の申請1回分のみ有効です。");
+  }
+
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   return (
@@ -236,6 +247,7 @@ export default function AdminAuditionsPage() {
                     <strong>{item.display_name}</strong>
                     <span className="meta">{new Date(item.created_at).toLocaleString("ja-JP")}</span>
                     <span className="meta">code: {item.consent_advice ? item.application_code : "なし"}</span>
+                    <span className="meta">user: {item.applied_by_user_id || "不明"}</span>
                   </div>
                 </td>
                 <td>
@@ -256,6 +268,9 @@ export default function AdminAuditionsPage() {
                     </button>
                     <button className="btn danger" type="button" onClick={() => review(item.id, "rejected")}>
                       不合格
+                    </button>
+                    <button className="btn" type="button" onClick={() => allowResubmit(item.id)}>
+                      再申請許可
                     </button>
                   </div>
                 </td>

@@ -43,44 +43,24 @@ export function SiteNav({ mobile }: { mobile?: boolean } = {}) {
 
   useEffect(() => {
     let mounted = true;
-    supabase.auth.getSession().then(async ({ data }) => {
-      const session = data.session;
+    async function applySession(session: Awaited<ReturnType<typeof supabase.auth.getSession>>["data"]["session"]) {
       if (!mounted) return;
-      const status = await getUserStatus(session?.access_token);
-      if (status.suspended) {
-        await supabase.auth.signOut();
-        if (mounted) {
-          setLoggedIn(false);
-          setIsAdmin(false);
-          setIsMember(false);
-          setAuthReady(true);
-          await clearAdminSession().catch(() => undefined);
-          router.replace("/auth/login?blocked=1");
-        }
-        return;
-      }
       setLoggedIn(Boolean(session));
       const email = session?.user?.email?.toLowerCase() || "";
       const admin = email === adminEmail;
       setIsAdmin(admin);
-      setIsMember(Boolean(session) && status.isMember);
       setAuthReady(true);
       if (admin) {
         void syncAdminSession(session?.access_token).catch(() => undefined);
       } else if (session) {
         void clearAdminSession().catch(() => undefined);
       }
-    });
 
-    const {
-      data: { subscription }
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === "SIGNED_OUT") {
-        await clearAdminSession().catch(() => undefined);
-      }
       const status = await getUserStatus(session?.access_token);
+      if (!mounted) return;
       if (status.suspended) {
         await supabase.auth.signOut();
+        if (!mounted) return;
         setLoggedIn(false);
         setIsAdmin(false);
         setIsMember(false);
@@ -89,17 +69,20 @@ export function SiteNav({ mobile }: { mobile?: boolean } = {}) {
         router.replace("/auth/login?blocked=1");
         return;
       }
-      setLoggedIn(Boolean(session));
-      const email = session?.user?.email?.toLowerCase() || "";
-      const admin = email === adminEmail;
-      setIsAdmin(admin);
       setIsMember(Boolean(session) && status.isMember);
-      setAuthReady(true);
-      if (admin) {
-        void syncAdminSession(session?.access_token).catch(() => undefined);
-      } else {
-        void clearAdminSession().catch(() => undefined);
+    }
+
+    supabase.auth.getSession().then(async ({ data }) => {
+      await applySession(data.session);
+    });
+
+    const {
+      data: { subscription }
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === "SIGNED_OUT") {
+        await clearAdminSession().catch(() => undefined);
       }
+      await applySession(session);
     });
 
     return () => {

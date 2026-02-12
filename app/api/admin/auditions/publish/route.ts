@@ -34,6 +34,7 @@ export async function POST(req: NextRequest) {
       const inserts = (approved || [])
         .filter((a) => !existingSet.has(a.id))
         .map((a) => ({
+          user_id: a.applied_by_user_id || null,
           display_name: a.display_name,
           joined_at: new Date().toISOString(),
           is_active: true,

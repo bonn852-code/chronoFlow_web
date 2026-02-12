@@ -3,9 +3,10 @@ import { applyRateLimit } from "@/lib/rate-limit";
 import { jsonError, jsonOk } from "@/lib/http";
 import { getCurrentBatch } from "@/lib/auditions";
 import { supabaseAdmin } from "@/lib/supabase";
-import { isValidUrl, makeApplicationCode, safeStringArray, safeText } from "@/lib/utils";
+import { hasSamePlatformSns, isAllowedAuditionUrl, makeApplicationCode, platformFromUrl, safeStringArray } from "@/lib/utils";
 import { hasSameOrigin } from "@/lib/security";
 import { getSuspensionState } from "@/lib/user-access";
+import { ensureUserProfile } from "@/lib/profile";
 
 export async function GET(req: NextRequest) {
   const rate = applyRateLimit(req.headers, "audition_apply_meta", 120, 60_000);
@@ -50,7 +51,6 @@ export async function POST(req: NextRequest) {
 
   const body = (await req.json().catch(() => null)) as
     | {
-        display_name?: string;
         video_url?: string;
         sns_urls?: unknown;
         consent_public_profile?: boolean;
@@ -58,14 +58,17 @@ export async function POST(req: NextRequest) {
       }
     | null;
 
-  const displayName = safeText(body?.display_name, 1, 120);
-  const videoUrl = safeText(body?.video_url, 10, 2000);
-  const snsUrls = safeStringArray(body?.sns_urls, 8).filter((url) => isValidUrl(url));
+  const videoUrl = typeof body?.video_url === "string" ? body.video_url.trim() : "";
+  const snsCandidateUrls = safeStringArray(body?.sns_urls, 8);
+  const snsUrls = snsCandidateUrls.filter((url) => isAllowedAuditionUrl(url));
   const consentPublic = body?.consent_public_profile === true;
   const consentAdvice = body?.consent_advice === true;
 
-  if (!displayName || !videoUrl || !isValidUrl(videoUrl) || !consentPublic) {
+  if (!videoUrl || !isAllowedAuditionUrl(videoUrl) || !consentPublic) {
     return jsonError("入力内容を確認してください", 400);
+  }
+  if (snsUrls.length !== snsCandidateUrls.length) {
+    return jsonError("SNS URLは YouTube / TikTok / Instagram のみ指定できます", 400);
   }
 
   try {
@@ -80,7 +83,35 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    const profile = await ensureUserProfile({ id: user.id, user_metadata: user.user_metadata });
+    const displayName = profile?.display_name?.trim();
+    if (!displayName) return jsonError("プロフィールの表示名を設定してから申請してください", 400);
+
+    const { data: existingApplication } = await supabaseAdmin
+      .from("audition_applications")
+      .select("id")
+      .eq("batch_id", batch.id)
+      .eq("applied_by_user_id", user.id)
+      .limit(1)
+      .maybeSingle();
+
+    if (existingApplication) {
+      const { data: allowed } = await supabaseAdmin
+        .from("audition_resubmit_permissions")
+        .select("batch_id,user_id")
+        .eq("batch_id", batch.id)
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (!allowed) return jsonError("この募集回では既に申請済みです。再申請は管理者の許可が必要です。", 409);
+      await supabaseAdmin.from("audition_resubmit_permissions").delete().eq("batch_id", batch.id).eq("user_id", user.id);
+    }
+
     const applicationCode = makeApplicationCode();
+    const warnings: string[] = [];
+    const videoPlatform = platformFromUrl(videoUrl);
+    if ((videoPlatform === "youtube" || videoPlatform === "tiktok" || videoPlatform === "instagram") && !hasSamePlatformSns(videoUrl, snsUrls)) {
+      warnings.push(`審査動画と同じプラットフォームのSNS URLを追加すると本人確認がスムーズになります（推奨）。`);
+    }
 
     const { error } = await supabaseAdmin.from("audition_applications").insert({
       batch_id: batch.id,
@@ -97,7 +128,7 @@ export async function POST(req: NextRequest) {
       return jsonError("申請の保存に失敗しました", 500);
     }
 
-    return jsonOk({ applicationCode: consentAdvice ? applicationCode : null });
+    return jsonOk({ applicationCode: consentAdvice ? applicationCode : null, warnings });
   } catch {
     return jsonError("申請処理に失敗しました", 500);
   }

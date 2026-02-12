@@ -14,6 +14,8 @@ export default function AuditionForm() {
   const [viewerUserId, setViewerUserId] = useState<string | null>(null);
   const [periodText, setPeriodText] = useState<string>("");
   const [submitStatus, setSubmitStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
+  const [warnings, setWarnings] = useState<string[]>([]);
+  const [profileName, setProfileName] = useState<string>("");
 
   useEffect(() => {
     async function loadPeriod() {
@@ -38,6 +40,8 @@ export default function AuditionForm() {
       if (!mounted) return;
       setIsLoggedIn(Boolean(data.session));
       setViewerUserId(data.session?.user.id ?? null);
+      const name = String(data.session?.user?.user_metadata?.display_name || "").trim();
+      setProfileName(name);
       if (data.session?.user.id) {
         try {
           const saved = localStorage.getItem(`${adviceCodeStoragePrefix}:${data.session.user.id}`);
@@ -54,6 +58,8 @@ export default function AuditionForm() {
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setIsLoggedIn(Boolean(session));
       setViewerUserId(session?.user.id ?? null);
+      const name = String(session?.user?.user_metadata?.display_name || "").trim();
+      setProfileName(name);
       if (session?.user.id) {
         try {
           const saved = localStorage.getItem(`${adviceCodeStoragePrefix}:${session.user.id}`);
@@ -88,6 +94,7 @@ export default function AuditionForm() {
     setMessage("申請送信を開始しました。数秒お待ちください。");
     setSubmitStatus("submitting");
     setApplicationCode(null);
+    setWarnings([]);
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     const snsRaw = (formData.get("sns_urls") as string)
@@ -96,7 +103,6 @@ export default function AuditionForm() {
       .filter(Boolean);
 
     const payload = {
-      display_name: formData.get("display_name"),
       video_url: formData.get("video_url"),
       sns_urls: snsRaw,
       consent_public_profile: formData.get("consent_public_profile") === "on",
@@ -115,7 +121,7 @@ export default function AuditionForm() {
         },
         body: JSON.stringify(payload)
       });
-      const data = (await response.json()) as { applicationCode?: string | null; error?: string };
+      const data = (await response.json()) as { applicationCode?: string | null; error?: string; warnings?: string[] };
 
       if (!response.ok) {
         setMessage(data.error || "送信に失敗しました");
@@ -124,6 +130,7 @@ export default function AuditionForm() {
       }
 
       setApplicationCode(data.applicationCode || null);
+      setWarnings(Array.isArray(data.warnings) ? data.warnings : []);
       if (data.applicationCode) {
         try {
           const userId = session?.user?.id || viewerUserId;
@@ -174,10 +181,6 @@ export default function AuditionForm() {
       <form action={onSubmit}>
         <fieldset disabled={loading || isOpen !== true} style={{ margin: 0, padding: 0, border: 0, display: "grid", gap: 14 }}>
           <label>
-            表示名
-            <input name="display_name" required maxLength={120} />
-          </label>
-          <label>
             審査用動画URL
             <input name="video_url" required type="url" placeholder="https://..." />
           </label>
@@ -185,6 +188,7 @@ export default function AuditionForm() {
             SNS URL（任意・1行に1つ）
             <textarea name="sns_urls" placeholder="https://tiktok.com/..." />
           </label>
+          <p className="meta">動画URL/SNS URLは YouTube・TikTok・Instagram のみ受け付けます。</p>
           <label>
             <input type="checkbox" name="consent_public_profile" required />
             合格時に表示名/作品の掲載に同意する
@@ -196,6 +200,9 @@ export default function AuditionForm() {
           <button className="btn primary" type="submit" disabled={loading || isOpen !== true || !isLoggedIn}>
             {loading ? "送信中..." : "申請する"}
           </button>
+          <p className="meta">
+            公開表示名はプロフィールの設定を使用します: <strong>{profileName || "未設定（プロフィールで設定してください）"}</strong>
+          </p>
         </fieldset>
       </form>
 
@@ -231,6 +238,16 @@ export default function AuditionForm() {
             <strong className="kbd">{applicationCode}</strong>
           </p>
           <p className="meta">不合格時アドバイスの確認に必要です（本人のみ）。</p>
+        </div>
+      ) : null}
+      {warnings.length ? (
+        <div className="card stack">
+          <strong>確認メモ（推奨）</strong>
+          {warnings.map((warning, index) => (
+            <p key={`${warning}-${index}`} className="meta">
+              {warning}
+            </p>
+          ))}
         </div>
       ) : null}
     </div>
