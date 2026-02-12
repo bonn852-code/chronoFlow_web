@@ -92,7 +92,10 @@ export async function getResolvedProfilesByUserIds(
     missing.map(async (userId) => {
       const userRes = await supabaseAdmin.auth.admin.getUserById(userId);
       const user = userRes.data?.user;
-      const name = safeText(user?.user_metadata?.display_name, 1, 120) || "メンバー";
+      const metaName = safeText(user?.user_metadata?.display_name, 1, 120);
+      const email = typeof user?.email === "string" ? user.email : "";
+      const emailName = email.includes("@") ? email.split("@")[0] : "";
+      const name = metaName || safeText(emailName, 1, 120) || "メンバー";
       const iconUrlRaw = typeof user?.user_metadata?.icon_url === "string" ? user.user_metadata.icon_url.trim() : "";
       const iconUrl = iconUrlRaw || null;
       const focusXRaw = Number(user?.user_metadata?.icon_focus_x);
