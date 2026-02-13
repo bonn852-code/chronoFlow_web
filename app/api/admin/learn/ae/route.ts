@@ -7,14 +7,24 @@ import { isValidUrl, safeText } from "@/lib/utils";
 export async function GET(req: NextRequest) {
   if (!checkAdminRequest(req)) return jsonError("Unauthorized", 401);
 
-  const { data, error } = await supabaseAdmin
-    .from("lessons_ae")
-    .select("id,title,youtube_url,sort_order,created_at")
-    .order("sort_order", { ascending: true })
-    .order("created_at", { ascending: false });
+  const page = Math.max(1, Number(req.nextUrl.searchParams.get("page") || 1) || 1);
+  const pageSize = Math.min(50, Math.max(1, Number(req.nextUrl.searchParams.get("pageSize") || 12) || 12));
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
+  const [{ data, error }, { count, error: countErr }] = await Promise.all([
+    supabaseAdmin
+      .from("lessons_ae")
+      .select("id,title,youtube_url,sort_order,created_at")
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: false })
+      .range(from, to),
+    supabaseAdmin.from("lessons_ae").select("*", { count: "exact", head: true })
+  ]);
 
   if (error) return jsonError("取得に失敗しました", 500);
-  return jsonOk({ lessons: data || [] });
+  if (countErr) return jsonError("件数の取得に失敗しました", 500);
+  return jsonOk({ lessons: data || [], total: count || 0, page, pageSize });
 }
 
 export async function POST(req: NextRequest) {

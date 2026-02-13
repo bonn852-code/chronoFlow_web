@@ -13,20 +13,41 @@ type Lesson = {
 export default function AdminLearnAePage() {
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [message, setMessage] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(12);
+  const [total, setTotal] = useState(0);
 
-  async function load() {
-    const res = await fetch("/api/admin/learn/ae", { cache: "no-store" });
-    const data = (await res.json()) as { lessons?: Lesson[]; error?: string };
+  async function load(targetPage = page) {
+    const res = await fetch(`/api/admin/learn/ae?page=${targetPage}&pageSize=${pageSize}`, { cache: "no-store" });
+    const data = (await res.json()) as {
+      lessons?: Lesson[];
+      total?: number;
+      page?: number;
+      pageSize?: number;
+      error?: string;
+    };
     if (!res.ok) {
       setMessage(data.error || "取得失敗");
       return;
     }
-    setLessons(data.lessons || []);
+    const nextLessons = data.lessons || [];
+    const nextTotal = data.total || 0;
+    const nextPage = data.page || targetPage;
+    const nextPageSize = data.pageSize || pageSize;
+    setLessons(nextLessons);
+    setTotal(nextTotal);
+    setPage(nextPage);
+    setPageSize(nextPageSize);
+    const totalPages = Math.max(1, Math.ceil(nextTotal / nextPageSize));
+    if (nextPage > totalPages) {
+      setPage(totalPages);
+    }
   }
 
   useEffect(() => {
-    void load();
-  }, []);
+    void load(page);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page]);
 
   async function add(formData: FormData) {
     const payload = {
@@ -40,14 +61,17 @@ export default function AdminLearnAePage() {
       body: JSON.stringify(payload)
     });
     if (!res.ok) setMessage("追加失敗");
-    await load();
+    setPage(1);
+    await load(1);
   }
 
   async function remove(id: string) {
     const res = await fetch(`/api/admin/learn/ae/${id}`, { method: "DELETE" });
     if (!res.ok) setMessage("削除失敗");
-    await load();
+    await load(page);
   }
+
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   return (
     <div className="stack">
@@ -86,6 +110,17 @@ export default function AdminLearnAePage() {
           </div>
         ))}
         {!lessons.length ? <p className="meta">未登録</p> : null}
+      </section>
+      <section className="pager">
+        <button className="btn" type="button" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+          前へ
+        </button>
+        <span className="meta">
+          {page} / {totalPages}
+        </span>
+        <button className="btn" type="button" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
+          次へ
+        </button>
       </section>
       {message ? <p className="meta">{message}</p> : null}
     </div>

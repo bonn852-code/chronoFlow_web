@@ -16,20 +16,43 @@ type SecurityEvent = {
 export default function AdminSecurityPage() {
   const [events, setEvents] = useState<SecurityEvent[]>([]);
   const [message, setMessage] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(30);
+  const [total, setTotal] = useState(0);
 
-  async function load() {
-    const res = await fetch("/api/admin/security-events?page=1&pageSize=30", { cache: "no-store" });
-    const data = (await res.json()) as { events?: SecurityEvent[]; error?: string };
+  async function load(targetPage = page) {
+    const res = await fetch(`/api/admin/security-events?page=${targetPage}&pageSize=${pageSize}`, { cache: "no-store" });
+    const data = (await res.json()) as {
+      events?: SecurityEvent[];
+      total?: number;
+      page?: number;
+      pageSize?: number;
+      error?: string;
+    };
     if (!res.ok) {
       setMessage(data.error || "ログ取得に失敗しました");
       return;
     }
-    setEvents(data.events || []);
+    const nextEvents = data.events || [];
+    const nextTotal = data.total || 0;
+    const nextPage = data.page || targetPage;
+    const nextPageSize = data.pageSize || pageSize;
+    setEvents(nextEvents);
+    setTotal(nextTotal);
+    setPage(nextPage);
+    setPageSize(nextPageSize);
+    const totalPages = Math.max(1, Math.ceil(nextTotal / nextPageSize));
+    if (nextPage > totalPages) {
+      setPage(totalPages);
+    }
   }
 
   useEffect(() => {
-    void load();
-  }, []);
+    void load(page);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page]);
+
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   return (
     <div className="stack">
@@ -69,7 +92,18 @@ export default function AdminSecurityPage() {
           </tbody>
         </table>
       </section>
+
+      <section className="pager">
+        <button className="btn" type="button" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+          前へ
+        </button>
+        <span className="meta">
+          {page} / {totalPages}
+        </span>
+        <button className="btn" type="button" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
+          次へ
+        </button>
+      </section>
     </div>
   );
 }
-

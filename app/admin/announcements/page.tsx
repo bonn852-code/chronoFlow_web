@@ -14,20 +14,41 @@ type Announcement = {
 export default function AdminAnnouncementsPage() {
   const [items, setItems] = useState<Announcement[]>([]);
   const [message, setMessage] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [total, setTotal] = useState(0);
 
-  async function load() {
-    const res = await fetch("/api/admin/announcements", { cache: "no-store" });
-    const data = (await res.json()) as { announcements?: Announcement[]; error?: string };
+  async function load(targetPage = page) {
+    const res = await fetch(`/api/admin/announcements?page=${targetPage}&pageSize=${pageSize}`, { cache: "no-store" });
+    const data = (await res.json()) as {
+      announcements?: Announcement[];
+      total?: number;
+      page?: number;
+      pageSize?: number;
+      error?: string;
+    };
     if (!res.ok) {
       setMessage(data.error || "取得失敗");
       return;
     }
-    setItems(data.announcements || []);
+    const nextItems = data.announcements || [];
+    const nextTotal = data.total || 0;
+    const nextPage = data.page || targetPage;
+    const nextPageSize = data.pageSize || pageSize;
+    setItems(nextItems);
+    setTotal(nextTotal);
+    setPage(nextPage);
+    setPageSize(nextPageSize);
+    const totalPages = Math.max(1, Math.ceil(nextTotal / nextPageSize));
+    if (nextPage > totalPages) {
+      setPage(totalPages);
+    }
   }
 
   useEffect(() => {
-    void load();
-  }, []);
+    void load(page);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page]);
 
   async function add(formData: FormData) {
     const payload = {
@@ -41,14 +62,17 @@ export default function AdminAnnouncementsPage() {
       body: JSON.stringify(payload)
     });
     if (!res.ok) setMessage("作成失敗");
-    await load();
+    setPage(1);
+    await load(1);
   }
 
   async function remove(id: string) {
     const res = await fetch(`/api/admin/announcements/${id}`, { method: "DELETE" });
     if (!res.ok) setMessage("削除失敗");
-    await load();
+    await load(page);
   }
+
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   return (
     <div className="stack">
@@ -92,6 +116,17 @@ export default function AdminAnnouncementsPage() {
             </button>
           </article>
         ))}
+      </section>
+      <section className="pager">
+        <button className="btn" type="button" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+          前へ
+        </button>
+        <span className="meta">
+          {page} / {totalPages}
+        </span>
+        <button className="btn" type="button" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
+          次へ
+        </button>
       </section>
       {message ? <p className="meta">{message}</p> : null}
     </div>
