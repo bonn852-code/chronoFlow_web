@@ -49,9 +49,10 @@ export async function getUserAccessState(
 
   const controlsAvailable = !error;
   const hasMemberColumn = Boolean(data && "is_member" in data);
-  let isMember = hasMemberColumn ? Boolean(data?.is_member) : false;
+  const isMemberFromControls = hasMemberColumn ? Boolean(data?.is_member) : false;
+  let isMember = isMemberFromControls;
 
-  if (!hasMemberColumn) {
+  if (!isMemberFromControls) {
     const { data: memberRow } = await supabaseAdmin
       .from("members")
       .select("id")

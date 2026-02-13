@@ -77,7 +77,7 @@ export async function GET(req: NextRequest) {
         suspended: Boolean(ctrl?.is_suspended),
         suspendReason: ctrl?.suspend_reason || null,
         suspendedAt: ctrl?.suspended_at || null,
-        isMember: controlHasMember ? Boolean(ctrl?.is_member) : memberFallback,
+        isMember: controlHasMember ? Boolean(ctrl?.is_member) || memberFallback : memberFallback,
         memberGrantedAt: ctrl?.member_granted_at || null
       };
     }),
