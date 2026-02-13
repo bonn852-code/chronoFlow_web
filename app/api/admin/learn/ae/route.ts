@@ -3,9 +3,13 @@ import { checkAdminRequest } from "@/lib/api-auth";
 import { jsonError, jsonOk } from "@/lib/http";
 import { supabaseAdmin } from "@/lib/supabase";
 import { isValidUrl, safeText } from "@/lib/utils";
+import { applyRateLimit } from "@/lib/rate-limit";
 
 export async function GET(req: NextRequest) {
   if (!checkAdminRequest(req)) return jsonError("Unauthorized", 401);
+
+  const rate = applyRateLimit(req.headers, "admin_learn_ae_list", 120, 60_000);
+  if (!rate.allowed) return jsonError("アクセスが多すぎます", 429, { retryAfter: rate.retryAfterSeconds });
 
   const page = Math.max(1, Number(req.nextUrl.searchParams.get("page") || 1) || 1);
   const pageSize = Math.min(50, Math.max(1, Number(req.nextUrl.searchParams.get("pageSize") || 12) || 12));
@@ -29,6 +33,9 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   if (!checkAdminRequest(req)) return jsonError("Unauthorized", 401);
+
+  const rate = applyRateLimit(req.headers, "admin_learn_ae_create", 30, 60_000);
+  if (!rate.allowed) return jsonError("アクセスが多すぎます", 429, { retryAfter: rate.retryAfterSeconds });
 
   const body = (await req.json().catch(() => null)) as { title?: string; youtubeUrl?: string; sortOrder?: number } | null;
   const title = safeText(body?.title, 1, 200);

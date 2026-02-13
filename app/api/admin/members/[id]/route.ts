@@ -4,9 +4,14 @@ import { checkAdminRequest } from "@/lib/api-auth";
 import { jsonError, jsonOk } from "@/lib/http";
 import { supabaseAdmin } from "@/lib/supabase";
 import { isUuid } from "@/lib/utils";
+import { applyRateLimit } from "@/lib/rate-limit";
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   if (!checkAdminRequest(req)) return jsonError("Unauthorized", 401);
+
+  const rate = applyRateLimit(req.headers, "admin_members_delete", 30, 60_000);
+  if (!rate.allowed) return jsonError("アクセスが多すぎます", 429, { retryAfter: rate.retryAfterSeconds });
+
   const { id } = await params;
   if (!isUuid(id)) return jsonError("IDが不正です", 400);
   const permanent = req.nextUrl.searchParams.get("permanent") === "1";
@@ -32,6 +37,10 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   if (!checkAdminRequest(req)) return jsonError("Unauthorized", 401);
+
+  const rate = applyRateLimit(req.headers, "admin_members_update", 60, 60_000);
+  if (!rate.allowed) return jsonError("アクセスが多すぎます", 429, { retryAfter: rate.retryAfterSeconds });
+
   const { id } = await params;
   if (!isUuid(id)) return jsonError("IDが不正です", 400);
   const body = (await req.json().catch(() => null)) as

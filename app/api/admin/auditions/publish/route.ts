@@ -4,9 +4,13 @@ import { checkAdminRequest } from "@/lib/api-auth";
 import { createNextBatch, getCurrentBatch } from "@/lib/auditions";
 import { jsonError, jsonOk } from "@/lib/http";
 import { supabaseAdmin } from "@/lib/supabase";
+import { applyRateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
   if (!checkAdminRequest(req)) return jsonError("Unauthorized", 401);
+
+  const rate = applyRateLimit(req.headers, "admin_auditions_publish", 10, 60_000);
+  if (!rate.allowed) return jsonError("アクセスが多すぎます", 429, { retryAfter: rate.retryAfterSeconds });
 
   try {
     const batch = await getCurrentBatch();

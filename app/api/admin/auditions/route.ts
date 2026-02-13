@@ -4,9 +4,13 @@ import { getCurrentBatch } from "@/lib/auditions";
 import { jsonError, jsonOk } from "@/lib/http";
 import { supabaseAdmin } from "@/lib/supabase";
 import { getResolvedProfilesByUserIds } from "@/lib/profile";
+import { applyRateLimit } from "@/lib/rate-limit";
 
 export async function GET(req: NextRequest) {
   if (!checkAdminRequest(req)) return jsonError("Unauthorized", 401);
+
+  const rate = applyRateLimit(req.headers, "admin_auditions_list", 120, 60_000);
+  if (!rate.allowed) return jsonError("アクセスが多すぎます", 429, { retryAfter: rate.retryAfterSeconds });
 
   const status = req.nextUrl.searchParams.get("status");
   const page = Math.max(1, Number(req.nextUrl.searchParams.get("page") || 1) || 1);
@@ -76,6 +80,9 @@ export async function GET(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   if (!checkAdminRequest(req)) return jsonError("Unauthorized", 401);
+
+  const rate = applyRateLimit(req.headers, "admin_auditions_update_period", 30, 60_000);
+  if (!rate.allowed) return jsonError("アクセスが多すぎます", 429, { retryAfter: rate.retryAfterSeconds });
 
   const body = (await req.json().catch(() => null)) as {
     applyOpenAt?: string;

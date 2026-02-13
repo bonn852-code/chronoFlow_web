@@ -3,9 +3,13 @@ import { checkAdminRequest } from "@/lib/api-auth";
 import { jsonError, jsonOk } from "@/lib/http";
 import { supabaseAdmin } from "@/lib/supabase";
 import { safeText } from "@/lib/utils";
+import { applyRateLimit } from "@/lib/rate-limit";
 
 export async function GET(req: NextRequest) {
   if (!checkAdminRequest(req)) return jsonError("Unauthorized", 401);
+
+  const rate = applyRateLimit(req.headers, "admin_announcements_list", 120, 60_000);
+  if (!rate.allowed) return jsonError("アクセスが多すぎます", 429, { retryAfter: rate.retryAfterSeconds });
 
   const page = Math.max(1, Number(req.nextUrl.searchParams.get("page") || 1) || 1);
   const pageSize = Math.min(50, Math.max(1, Number(req.nextUrl.searchParams.get("pageSize") || 10) || 10));
@@ -28,6 +32,9 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   if (!checkAdminRequest(req)) return jsonError("Unauthorized", 401);
+
+  const rate = applyRateLimit(req.headers, "admin_announcements_create", 30, 60_000);
+  if (!rate.allowed) return jsonError("アクセスが多すぎます", 429, { retryAfter: rate.retryAfterSeconds });
 
   const body = (await req.json().catch(() => null)) as {
     title?: string;

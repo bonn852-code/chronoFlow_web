@@ -6,9 +6,14 @@ import { env } from "@/lib/env";
 import { isUuid, safeText } from "@/lib/utils";
 import { logSecurityEvent } from "@/lib/security-events";
 import { ensureUserProfile } from "@/lib/profile";
+import { applyRateLimit } from "@/lib/rate-limit";
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   if (!checkAdminRequest(req)) return jsonError("Unauthorized", 401);
+
+  const rate = applyRateLimit(req.headers, "admin_users_update", 60, 60_000);
+  if (!rate.allowed) return jsonError("アクセスが多すぎます", 429, { retryAfter: rate.retryAfterSeconds });
+
   const { id } = await params;
   if (!isUuid(id)) return jsonError("IDが不正です", 400);
 
@@ -125,6 +130,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   if (!checkAdminRequest(req)) return jsonError("Unauthorized", 401);
+
+  const rate = applyRateLimit(req.headers, "admin_users_delete", 30, 60_000);
+  if (!rate.allowed) return jsonError("アクセスが多すぎます", 429, { retryAfter: rate.retryAfterSeconds });
+
   const { id } = await params;
   if (!isUuid(id)) return jsonError("IDが不正です", 400);
 

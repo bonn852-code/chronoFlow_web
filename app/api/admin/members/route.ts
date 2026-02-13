@@ -5,9 +5,14 @@ import { jsonError, jsonOk } from "@/lib/http";
 import { supabaseAdmin } from "@/lib/supabase";
 import { getResolvedProfilesByUserIds } from "@/lib/profile";
 import { safeText } from "@/lib/utils";
+import { applyRateLimit } from "@/lib/rate-limit";
 
 export async function GET(req: NextRequest) {
   if (!checkAdminRequest(req)) return jsonError("Unauthorized", 401);
+
+  const rate = applyRateLimit(req.headers, "admin_members_list", 120, 60_000);
+  if (!rate.allowed) return jsonError("アクセスが多すぎます", 429, { retryAfter: rate.retryAfterSeconds });
+
   const includeInactive = req.nextUrl.searchParams.get("includeInactive") === "1";
   const page = Math.max(1, Number(req.nextUrl.searchParams.get("page") || 1) || 1);
   const pageSize = Math.min(30, Math.max(1, Number(req.nextUrl.searchParams.get("pageSize") || 7) || 7));
@@ -68,6 +73,10 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   if (!checkAdminRequest(req)) return jsonError("Unauthorized", 401);
+
+  const rate = applyRateLimit(req.headers, "admin_members_create", 30, 60_000);
+  if (!rate.allowed) return jsonError("アクセスが多すぎます", 429, { retryAfter: rate.retryAfterSeconds });
+
   const body = (await req.json().catch(() => null)) as { displayName?: string } | null;
   const displayName = safeText(body?.displayName, 1, 120);
   if (!displayName) return jsonError("表示名が不正です", 400);

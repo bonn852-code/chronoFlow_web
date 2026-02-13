@@ -7,9 +7,11 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminDashboardPage() {
   const batch = await getCurrentBatch();
-  const [{ count: pendingCount }, { count: inquiryCount }] = await Promise.all([
+  const [{ count: pendingCount }, { count: inquiryCount }, { count: eventCount }, { count: memberCount }] = await Promise.all([
     supabaseAdmin.from("audition_applications").select("*", { count: "exact", head: true }).eq("batch_id", batch.id).eq("status", "pending"),
-    supabaseAdmin.from("contact_inquiries").select("*", { count: "exact", head: true })
+    supabaseAdmin.from("contact_inquiries").select("*", { count: "exact", head: true }),
+    supabaseAdmin.from("security_events").select("*", { count: "exact", head: true }),
+    supabaseAdmin.from("members").select("*", { count: "exact", head: true }).eq("is_active", true)
   ]);
 
   return (
@@ -48,6 +50,20 @@ export default async function AdminDashboardPage() {
           <p style={{ fontSize: "2rem", margin: 0 }}>{inquiryCount || 0}</p>
           <Link href="/admin/inquiries" className="btn">
             お問い合わせ管理へ
+          </Link>
+        </article>
+        <article className="card stack">
+          <h2>監査ログ件数</h2>
+          <p style={{ fontSize: "2rem", margin: 0 }}>{eventCount || 0}</p>
+          <Link href="/admin/security" className="btn">
+            監査管理へ
+          </Link>
+        </article>
+        <article className="card stack">
+          <h2>公開メンバー数</h2>
+          <p style={{ fontSize: "2rem", margin: 0 }}>{memberCount || 0}</p>
+          <Link href="/admin/members" className="btn">
+            メンバー管理へ
           </Link>
         </article>
       </section>
