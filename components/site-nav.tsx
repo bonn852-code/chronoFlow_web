@@ -37,7 +37,7 @@ export function SiteNav({ mobile }: { mobile?: boolean } = {}) {
         const raw = sessionStorage.getItem(cacheKey);
         if (raw) {
           const parsed = JSON.parse(raw) as { expiresAt: number; suspended: boolean; isMember: boolean };
-          if (parsed.expiresAt > Date.now()) {
+          if (parsed.expiresAt > Date.now() && parsed.isMember) {
             return { suspended: parsed.suspended, isMember: parsed.isMember };
           }
         }
@@ -60,7 +60,7 @@ export function SiteNav({ mobile }: { mobile?: boolean } = {}) {
           cacheKey,
           JSON.stringify({
             ...result,
-            expiresAt: Date.now() + 15_000
+            expiresAt: Date.now() + 5_000
           })
         );
       } catch {
