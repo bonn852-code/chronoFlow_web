@@ -5,6 +5,7 @@ import { verifyAdminSessionTokenEdge } from "@/lib/admin-auth-edge";
 
 const ADMIN_PATHS = ["/admin", "/api/admin"];
 const maintenanceMode = process.env.MAINTENANCE_MODE === "true";
+const STATIC_PREFIXES = ["/_next", "/favicon.ico", "/robots.txt", "/sitemap.xml", "/icons", "/brand"];
 
 function needsAdmin(pathname: string): boolean {
   if (
@@ -22,6 +23,10 @@ function needsAdmin(pathname: string): boolean {
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const method = req.method.toUpperCase();
+
+  if (STATIC_PREFIXES.some((prefix) => pathname.startsWith(prefix))) {
+    return NextResponse.next();
+  }
 
   if (maintenanceMode) {
     const isAdminPath = ADMIN_PATHS.some((prefix) => pathname.startsWith(prefix));
@@ -108,5 +113,5 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/api/admin/:path*"]
+  matcher: ["/((?!_next/|favicon.ico|robots.txt|sitemap.xml|icons/|brand/).*)"]
 };
