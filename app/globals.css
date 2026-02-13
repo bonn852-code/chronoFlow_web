@@ -212,6 +212,14 @@ main {
   gap: 12px;
 }
 
+.footer-links {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .footer-brand {
   display: inline-flex;
   align-items: center;

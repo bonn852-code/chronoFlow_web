@@ -35,7 +35,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <Link href="/" className="footer-brand" aria-label={`${env.siteName} トップへ`}>
               <Image src="/brand/chronoflow-logo.png" alt="" width={148} height={30} className="footer-logo" />
             </Link>
-            <p className="meta">© {new Date().getFullYear()} {env.siteName}</p>
+            <div className="footer-links">
+              <Link href="/terms" className="meta">
+                利用規約
+              </Link>
+              <Link href="/privacy" className="meta">
+                プライバシーポリシー
+              </Link>
+              <p className="meta">© {new Date().getFullYear()} {env.siteName}</p>
+            </div>
           </div>
         </footer>
         <SiteNav mobile />
