@@ -21,7 +21,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (userErr || !userData?.user) return jsonError("ユーザーが見つかりません", 404);
 
   const email = userData.user.email?.toLowerCase() || "";
-  if (email === env.adminEmail.toLowerCase()) return jsonError("管理者アカウントは停止できません", 403);
+  if (typeof body?.suspended === "boolean" && email === env.adminEmail.toLowerCase()) {
+    return jsonError("管理者アカウントは停止できません", 403);
+  }
 
   const prev = await supabaseAdmin.from("user_account_controls").select("*").eq("user_id", id).maybeSingle();
   const prevErrorCode = (prev.error as { code?: string } | null)?.code;
