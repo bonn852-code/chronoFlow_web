@@ -34,7 +34,7 @@ export default async function MembersPage({
         </form>
       </section>
 
-      <section className="grid grid-3">
+      <section className="grid grid-3 members-grid">
         {members.map((m) => (
           <MemberCard
             key={m.id}
