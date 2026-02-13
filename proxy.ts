@@ -4,6 +4,7 @@ import { readAdminSessionToken } from "@/lib/constants";
 import { verifyAdminSessionTokenEdge } from "@/lib/admin-auth-edge";
 
 const ADMIN_PATHS = ["/admin", "/api/admin"];
+const maintenanceMode = process.env.MAINTENANCE_MODE === "true";
 
 function needsAdmin(pathname: string): boolean {
   if (
@@ -21,6 +22,20 @@ function needsAdmin(pathname: string): boolean {
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const method = req.method.toUpperCase();
+
+  if (maintenanceMode) {
+    const isAdminPath = ADMIN_PATHS.some((prefix) => pathname.startsWith(prefix));
+    const isMaintenancePage = pathname === "/maintenance";
+    const isAdminLogin = pathname.startsWith("/enter-admin") || pathname.startsWith("/auth/login");
+    if (!isAdminPath && !isMaintenancePage && !isAdminLogin) {
+      if (pathname.startsWith("/api")) {
+        return NextResponse.json({ error: "メンテナンス中です" }, { status: 503 });
+      }
+      const url = req.nextUrl.clone();
+      url.pathname = "/maintenance";
+      return NextResponse.redirect(url);
+    }
+  }
 
   const response = NextResponse.next();
   response.headers.set("X-Frame-Options", "DENY");
