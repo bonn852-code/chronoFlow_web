@@ -3,9 +3,20 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+type AdminRoute =
+  | "/admin"
+  | "/admin/auditions"
+  | "/admin/members"
+  | "/admin/users"
+  | "/admin/inquiries"
+  | "/admin/security"
+  | "/admin/assets"
+  | "/admin/learn/ae"
+  | "/admin/announcements";
+
 export function AdminNav() {
   const pathname = usePathname();
-  const items = [
+  const items: Array<{ href: AdminRoute; label: string; match: (p: string) => boolean }> = [
     { href: "/admin", label: "ダッシュボード", match: (p: string) => p === "/admin" },
     { href: "/admin/auditions", label: "審査管理", match: (p: string) => p.startsWith("/admin/auditions") },
     { href: "/admin/members", label: "メンバー管理", match: (p: string) => p.startsWith("/admin/members") },
