@@ -8,6 +8,8 @@ type Asset = { id: string; name: string; external_url: string; description: stri
 export default function AdminAssetsPage() {
   const [assets, setAssets] = useState<Asset[]>([]);
   const [message, setMessage] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [pendingId, setPendingId] = useState<string | null>(null);
 
   async function load() {
     const res = await fetch("/api/admin/assets", { cache: "no-store" });
@@ -24,24 +26,36 @@ export default function AdminAssetsPage() {
   }, []);
 
   async function create(formData: FormData) {
+    setSubmitting(true);
+    setMessage("更新中...");
     const payload = {
       name: String(formData.get("name") || "").trim(),
       externalUrl: String(formData.get("externalUrl") || "").trim(),
       description: String(formData.get("description") || "").trim()
     };
-    const res = await fetch("/api/admin/assets", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
-    if (!res.ok) setMessage("素材リンクの登録に失敗しました");
-    await load();
+    try {
+      const res = await fetch("/api/admin/assets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) setMessage("素材リンクの登録に失敗しました");
+      await load();
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   async function remove(id: string) {
-    const res = await fetch(`/api/admin/assets/${id}`, { method: "DELETE" });
-    if (!res.ok) setMessage("削除に失敗しました");
-    await load();
+    setPendingId(id);
+    setMessage("更新中...");
+    try {
+      const res = await fetch(`/api/admin/assets/${id}`, { method: "DELETE" });
+      if (!res.ok) setMessage("削除に失敗しました");
+      await load();
+    } finally {
+      setPendingId(null);
+    }
   }
 
   return (
@@ -65,7 +79,7 @@ export default function AdminAssetsPage() {
             説明（任意）
             <textarea name="description" maxLength={300} placeholder="ダウンロード手順、注意点など" />
           </label>
-          <button className="btn primary" type="submit">
+          <button className={`btn primary${submitting ? " is-loading" : ""}`} type="submit" disabled={submitting}>
             リンクを登録
           </button>
         </form>
@@ -88,7 +102,11 @@ export default function AdminAssetsPage() {
               <a className="btn" href={asset.external_url} target="_blank" rel="noreferrer noopener">
                 確認
               </a>
-              <button className="btn danger" onClick={() => remove(asset.id)}>
+              <button
+                className={`btn danger${pendingId === asset.id ? " is-loading" : ""}`}
+                onClick={() => remove(asset.id)}
+                disabled={pendingId === asset.id}
+              >
                 削除
               </button>
             </div>

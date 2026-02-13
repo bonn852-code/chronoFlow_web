@@ -21,6 +21,7 @@ export default function AdminUsersPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(7);
   const [total, setTotal] = useState(0);
+  const [pending, setPending] = useState<Record<string, string>>({});
 
   async function load(targetPage = page) {
     const res = await fetch(`/api/admin/users?page=${targetPage}&pageSize=${pageSize}`, { cache: "no-store" });
@@ -41,46 +42,76 @@ export default function AdminUsersPage() {
   }, [page]);
 
   async function changeSuspend(userId: string, next: boolean) {
+    setPending((prev) => ({ ...prev, [userId]: "suspend" }));
+    setMessage("更新中...");
     const reason = next ? window.prompt("停止理由（任意）", "") || "" : "";
-    const res = await fetch(`/api/admin/users/${userId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ suspended: next, reason })
-    });
-    const data = (await res.json()) as { error?: string };
-    if (!res.ok) {
-      setMessage(data.error || "停止状態の更新に失敗しました");
-      return;
+    try {
+      const res = await fetch(`/api/admin/users/${userId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ suspended: next, reason })
+      });
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok) {
+        setMessage(data.error || "停止状態の更新に失敗しました");
+        return;
+      }
+      setMessage(next ? "ユーザーを停止しました" : "停止を解除しました");
+      await load(page);
+    } finally {
+      setPending((prev) => {
+        const nextState = { ...prev };
+        delete nextState[userId];
+        return nextState;
+      });
     }
-    setMessage(next ? "ユーザーを停止しました" : "停止を解除しました");
-    await load(page);
   }
 
   async function changeMember(userId: string, next: boolean) {
-    const res = await fetch(`/api/admin/users/${userId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ isMember: next })
-    });
-    const data = (await res.json()) as { error?: string };
-    if (!res.ok) {
-      setMessage(data.error || "メンバー権限の更新に失敗しました");
-      return;
+    setPending((prev) => ({ ...prev, [userId]: "member" }));
+    setMessage("更新中...");
+    try {
+      const res = await fetch(`/api/admin/users/${userId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isMember: next })
+      });
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok) {
+        setMessage(data.error || "メンバー権限の更新に失敗しました");
+        return;
+      }
+      setMessage(next ? "メンバー権限を付与しました" : "メンバー権限を解除しました");
+      await load(page);
+    } finally {
+      setPending((prev) => {
+        const nextState = { ...prev };
+        delete nextState[userId];
+        return nextState;
+      });
     }
-    setMessage(next ? "メンバー権限を付与しました" : "メンバー権限を解除しました");
-    await load(page);
   }
 
   async function deleteUser(userId: string, email: string | null) {
     if (!window.confirm(`${email || userId} を削除します。元に戻せません。`)) return;
-    const res = await fetch(`/api/admin/users/${userId}`, { method: "DELETE" });
-    const data = (await res.json()) as { error?: string };
-    if (!res.ok) {
-      setMessage(data.error || "ユーザー削除に失敗しました");
-      return;
+    setPending((prev) => ({ ...prev, [userId]: "delete" }));
+    setMessage("更新中...");
+    try {
+      const res = await fetch(`/api/admin/users/${userId}`, { method: "DELETE" });
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok) {
+        setMessage(data.error || "ユーザー削除に失敗しました");
+        return;
+      }
+      setMessage("ユーザーを削除しました");
+      await load(page);
+    } finally {
+      setPending((prev) => {
+        const nextState = { ...prev };
+        delete nextState[userId];
+        return nextState;
+      });
     }
-    setMessage("ユーザーを削除しました");
-    await load(page);
   }
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -121,13 +152,28 @@ export default function AdminUsersPage() {
                 <td>{u.isMember ? "付与済み" : "未付与"}</td>
                 <td>
                   <div className="split admin-actions">
-                    <button className="btn" type="button" onClick={() => changeSuspend(u.id, !u.suspended)}>
+                    <button
+                      className={`btn${pending[u.id] === "suspend" ? " is-loading" : ""}`}
+                      type="button"
+                      onClick={() => changeSuspend(u.id, !u.suspended)}
+                      disabled={Boolean(pending[u.id])}
+                    >
                       {u.suspended ? "停止解除" : "停止"}
                     </button>
-                    <button className="btn" type="button" onClick={() => changeMember(u.id, !u.isMember)}>
+                    <button
+                      className={`btn${pending[u.id] === "member" ? " is-loading" : ""}`}
+                      type="button"
+                      onClick={() => changeMember(u.id, !u.isMember)}
+                      disabled={Boolean(pending[u.id])}
+                    >
                       {u.isMember ? "会員解除" : "会員化"}
                     </button>
-                    <button className="btn danger" type="button" onClick={() => deleteUser(u.id, u.email)}>
+                    <button
+                      className={`btn danger${pending[u.id] === "delete" ? " is-loading" : ""}`}
+                      type="button"
+                      onClick={() => deleteUser(u.id, u.email)}
+                      disabled={Boolean(pending[u.id])}
+                    >
                       削除
                     </button>
                   </div>

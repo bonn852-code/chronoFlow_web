@@ -370,6 +370,12 @@ main {
   }
 }
 
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .card h1,
 .card h2,
 .card h3 {
@@ -403,6 +409,21 @@ select {
   cursor: pointer;
   font-weight: 700;
   transition: 160ms ease;
+}
+
+.btn.is-loading {
+  pointer-events: none;
+  opacity: 0.72;
+}
+
+.btn.is-loading::after {
+  content: "";
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  animation: spin 0.8s linear infinite;
 }
 
 .btn:hover {

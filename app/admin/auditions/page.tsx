@@ -35,6 +35,10 @@ export default function AdminAuditionsPage() {
   const [batch, setBatch] = useState<BatchInfo | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [pendingAction, setPendingAction] = useState<Record<string, string>>({});
+  const [pendingBatchId, setPendingBatchId] = useState<string | null>(null);
+  const [savingPeriod, setSavingPeriod] = useState(false);
+  const [publishing, setPublishing] = useState(false);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [pageSize, setPageSize] = useState(7);
@@ -114,78 +118,116 @@ export default function AdminAuditionsPage() {
   }, [load]);
 
   async function review(id: string, status: "approved" | "rejected") {
+    setPendingAction((prev) => ({ ...prev, [id]: status }));
+    setMessage("更新中...");
     setLoading(true);
     const advice = status === "rejected" ? window.prompt("アドバイス（任意）", "") || "" : "";
-    const res = await fetch(`/api/admin/auditions/${id}/review`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status, adviceText: advice })
-    });
-    if (!res.ok) setMessage("更新に失敗しました");
-    await load();
-    setLoading(false);
+    try {
+      const res = await fetch(`/api/admin/auditions/${id}/review`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status, adviceText: advice })
+      });
+      if (!res.ok) setMessage("更新に失敗しました");
+      await load();
+    } finally {
+      setLoading(false);
+      setPendingAction((prev) => {
+        const nextState = { ...prev };
+        delete nextState[id];
+        return nextState;
+      });
+    }
   }
 
   async function publish() {
     if (!window.confirm("結果発表を実行しますか？")) return;
-    const res = await fetch("/api/admin/auditions/publish", { method: "POST" });
-    const data = (await res.json()) as { error?: string; publishedCount?: number };
-    if (!res.ok) {
-      setMessage(data.error || "実行失敗");
-      return;
+    setPublishing(true);
+    setMessage("更新中...");
+    try {
+      const res = await fetch("/api/admin/auditions/publish", { method: "POST" });
+      const data = (await res.json()) as { error?: string; publishedCount?: number };
+      if (!res.ok) {
+        setMessage(data.error || "実行失敗");
+        return;
+      }
+      setMessage(`結果発表を実行しました。対象: ${data.publishedCount || 0}`);
+      await load();
+    } finally {
+      setPublishing(false);
     }
-    setMessage(`結果発表を実行しました。対象: ${data.publishedCount || 0}`);
-    await load();
   }
 
   async function savePeriod() {
     if (!openAt || !closeAt) return;
-    const res = await fetch("/api/admin/auditions", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        applyOpenAt: new Date(openAt).toISOString(),
-        applyCloseAt: new Date(closeAt).toISOString()
-      })
-    });
-    const data = (await res.json()) as { error?: string };
-    if (!res.ok) {
-      setMessage(data.error || "期間更新に失敗しました");
-      return;
+    setSavingPeriod(true);
+    setMessage("更新中...");
+    try {
+      const res = await fetch("/api/admin/auditions", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          applyOpenAt: new Date(openAt).toISOString(),
+          applyCloseAt: new Date(closeAt).toISOString()
+        })
+      });
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok) {
+        setMessage(data.error || "期間更新に失敗しました");
+        return;
+      }
+      setMessage("申請期間を更新しました");
+      await load();
+    } finally {
+      setSavingPeriod(false);
     }
-    setMessage("申請期間を更新しました");
-    await load();
   }
 
   async function deleteBatch(id: string) {
     if (!window.confirm("この回次結果を削除しますか？（申請データも削除されます）")) return;
-    const res = await fetch(`/api/admin/auditions/batches/${id}`, { method: "DELETE" });
-    const data = (await res.json()) as { error?: string };
-    if (!res.ok) {
-      setMessage(data.error || "回次削除に失敗しました");
-      return;
+    setPendingBatchId(id);
+    setMessage("更新中...");
+    try {
+      const res = await fetch(`/api/admin/auditions/batches/${id}`, { method: "DELETE" });
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok) {
+        setMessage(data.error || "回次削除に失敗しました");
+        return;
+      }
+      setMessage("回次結果を削除しました");
+      setBatches((prev) => prev.filter((b) => b.id !== id));
+      if (batch?.id === id) {
+        setBatch(null);
+        setOpenAt("");
+        setCloseAt("");
+        setItems([]);
+        setTotal(0);
+      }
+      await load();
+      router.refresh();
+    } finally {
+      setPendingBatchId(null);
     }
-    setMessage("回次結果を削除しました");
-    setBatches((prev) => prev.filter((b) => b.id !== id));
-    if (batch?.id === id) {
-      setBatch(null);
-      setOpenAt("");
-      setCloseAt("");
-      setItems([]);
-      setTotal(0);
-    }
-    await load();
-    router.refresh();
   }
 
   async function allowResubmit(id: string) {
-    const res = await fetch(`/api/admin/auditions/${id}/allow-resubmit`, { method: "POST" });
-    const data = (await res.json()) as { error?: string };
-    if (!res.ok) {
-      setMessage(data.error || "再申請許可に失敗しました");
-      return;
+    setPendingAction((prev) => ({ ...prev, [id]: "resubmit" }));
+    setMessage("更新中...");
+    try {
+      const res = await fetch(`/api/admin/auditions/${id}/allow-resubmit`, { method: "POST" });
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok) {
+        setMessage(data.error || "再申請許可に失敗しました");
+        return;
+      }
+      setMessage("このユーザーに再申請を許可しました。次回の申請1回分のみ有効です。");
+    } finally {
+      setPendingAction((prev) => {
+        const nextState = { ...prev };
+        delete nextState[id];
+        return nextState;
+      });
     }
-    setMessage("このユーザーに再申請を許可しました。次回の申請1回分のみ有効です。");
   }
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -211,12 +253,22 @@ export default function AdminAuditionsPage() {
                 <input type="datetime-local" value={closeAt} onChange={(e) => setCloseAt(e.target.value)} />
               </label>
             </div>
-            <button className="btn" type="button" onClick={savePeriod}>
+            <button
+              className={`btn${savingPeriod ? " is-loading" : ""}`}
+              type="button"
+              onClick={savePeriod}
+              disabled={savingPeriod}
+            >
               申請期間を保存
             </button>
           </div>
         ) : null}
-        <button className="btn primary" type="button" onClick={publish} disabled={loading}>
+        <button
+          className={`btn primary${publishing ? " is-loading" : ""}`}
+          type="button"
+          onClick={publish}
+          disabled={loading || publishing}
+        >
           結果発表を実行
         </button>
         {message ? <p className="meta">{message}</p> : null}
@@ -263,13 +315,28 @@ export default function AdminAuditionsPage() {
                 <td>{toStatusLabel(item.status)}</td>
                 <td>
                   <div className="split admin-actions">
-                    <button className="btn" type="button" onClick={() => review(item.id, "approved")}>
+                    <button
+                      className={`btn${pendingAction[item.id] === "approved" ? " is-loading" : ""}`}
+                      type="button"
+                      onClick={() => review(item.id, "approved")}
+                      disabled={Boolean(pendingAction[item.id])}
+                    >
                       合格
                     </button>
-                    <button className="btn danger" type="button" onClick={() => review(item.id, "rejected")}>
+                    <button
+                      className={`btn danger${pendingAction[item.id] === "rejected" ? " is-loading" : ""}`}
+                      type="button"
+                      onClick={() => review(item.id, "rejected")}
+                      disabled={Boolean(pendingAction[item.id])}
+                    >
                       不合格
                     </button>
-                    <button className="btn" type="button" onClick={() => allowResubmit(item.id)}>
+                    <button
+                      className={`btn${pendingAction[item.id] === "resubmit" ? " is-loading" : ""}`}
+                      type="button"
+                      onClick={() => allowResubmit(item.id)}
+                      disabled={Boolean(pendingAction[item.id])}
+                    >
                       再申請許可
                     </button>
                   </div>
@@ -306,7 +373,12 @@ export default function AdminAuditionsPage() {
               </span>
               <span className="meta">発表: {b.published_at ? new Date(b.published_at).toLocaleString("ja-JP") : "未発表"}</span>
             </div>
-            <button className="btn danger" type="button" onClick={() => deleteBatch(b.id)}>
+            <button
+              className={`btn danger${pendingBatchId === b.id ? " is-loading" : ""}`}
+              type="button"
+              onClick={() => deleteBatch(b.id)}
+              disabled={pendingBatchId === b.id}
+            >
               削除
             </button>
           </div>

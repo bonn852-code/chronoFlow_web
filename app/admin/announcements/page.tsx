@@ -17,6 +17,8 @@ export default function AdminAnnouncementsPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [total, setTotal] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
+  const [pendingId, setPendingId] = useState<string | null>(null);
 
   async function load(targetPage = page) {
     const res = await fetch(`/api/admin/announcements?page=${targetPage}&pageSize=${pageSize}`, { cache: "no-store" });
@@ -51,25 +53,37 @@ export default function AdminAnnouncementsPage() {
   }, [page]);
 
   async function add(formData: FormData) {
+    setSubmitting(true);
+    setMessage("更新中...");
     const payload = {
       title: formData.get("title"),
       body: formData.get("body"),
       scope: formData.get("scope")
     };
-    const res = await fetch("/api/admin/announcements", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
-    if (!res.ok) setMessage("作成失敗");
-    setPage(1);
-    await load(1);
+    try {
+      const res = await fetch("/api/admin/announcements", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) setMessage("作成失敗");
+      setPage(1);
+      await load(1);
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   async function remove(id: string) {
-    const res = await fetch(`/api/admin/announcements/${id}`, { method: "DELETE" });
-    if (!res.ok) setMessage("削除失敗");
-    await load(page);
+    setPendingId(id);
+    setMessage("更新中...");
+    try {
+      const res = await fetch(`/api/admin/announcements/${id}`, { method: "DELETE" });
+      if (!res.ok) setMessage("削除失敗");
+      await load(page);
+    } finally {
+      setPendingId(null);
+    }
   }
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -95,7 +109,7 @@ export default function AdminAnnouncementsPage() {
               <option value="members">members</option>
             </select>
           </label>
-          <button className="btn primary" type="submit">
+          <button className={`btn primary${submitting ? " is-loading" : ""}`} type="submit" disabled={submitting}>
             作成
           </button>
         </form>
@@ -111,7 +125,11 @@ export default function AdminAnnouncementsPage() {
             </div>
             <p className="meta">{new Date(item.created_at).toLocaleDateString("ja-JP")}</p>
             <p>{item.body}</p>
-            <button className="btn danger" onClick={() => remove(item.id)}>
+            <button
+              className={`btn danger${pendingId === item.id ? " is-loading" : ""}`}
+              onClick={() => remove(item.id)}
+              disabled={pendingId === item.id}
+            >
               削除
             </button>
           </article>

@@ -30,6 +30,9 @@ export default function AdminMembersPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(7);
   const [total, setTotal] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
+  const [pending, setPending] = useState<Record<string, string>>({});
+  const [pendingLinkId, setPendingLinkId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const res = await fetch(
@@ -72,83 +75,145 @@ export default function AdminMembersPage() {
   }, [load]);
 
   async function addMember(formData: FormData) {
+    setSubmitting(true);
+    setMessage("更新中...");
     const displayName = String(formData.get("displayName") || "");
-    const res = await fetch("/api/admin/members", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ displayName })
-    });
-    if (!res.ok) setMessage("追加に失敗しました");
-    await load();
+    try {
+      const res = await fetch("/api/admin/members", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ displayName })
+      });
+      if (!res.ok) setMessage("追加に失敗しました");
+      await load();
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   async function deactivate(id: string) {
     if (!window.confirm("このメンバーを公開一覧から削除（非アクティブ化）しますか？")) return;
-    const res = await fetch(`/api/admin/members/${id}`, { method: "DELETE" });
-    if (!res.ok) setMessage("削除に失敗しました");
-    else setMessage("公開一覧から削除しました（データは保持されています）");
-    await load();
+    setPending((prev) => ({ ...prev, [id]: "deactivate" }));
+    setMessage("更新中...");
+    try {
+      const res = await fetch(`/api/admin/members/${id}`, { method: "DELETE" });
+      if (!res.ok) setMessage("削除に失敗しました");
+      else setMessage("公開一覧から削除しました（データは保持されています）");
+      await load();
+    } finally {
+      setPending((prev) => {
+        const nextState = { ...prev };
+        delete nextState[id];
+        return nextState;
+      });
+    }
   }
 
   async function hardDelete(id: string, name: string) {
     if (!window.confirm(`"${name}" をDBから完全削除します。元に戻せません。実行しますか？`)) return;
-    const res = await fetch(`/api/admin/members/${id}?permanent=1`, { method: "DELETE" });
-    const data = (await res.json()) as { error?: string };
-    if (!res.ok) {
-      setMessage(data.error || "完全削除に失敗しました");
-      return;
+    setPending((prev) => ({ ...prev, [id]: "hardDelete" }));
+    setMessage("更新中...");
+    try {
+      const res = await fetch(`/api/admin/members/${id}?permanent=1`, { method: "DELETE" });
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok) {
+        setMessage(data.error || "完全削除に失敗しました");
+        return;
+      }
+      setMessage("完全削除しました");
+      await load();
+    } finally {
+      setPending((prev) => {
+        const nextState = { ...prev };
+        delete nextState[id];
+        return nextState;
+      });
     }
-    setMessage("完全削除しました");
-    await load();
   }
 
   async function regenerate(id: string) {
-    const res = await fetch(`/api/admin/members/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ regeneratePortal: true })
-    });
-    if (!res.ok) setMessage("再発行に失敗しました");
-    await load();
+    setPending((prev) => ({ ...prev, [id]: "regenerate" }));
+    setMessage("更新中...");
+    try {
+      const res = await fetch(`/api/admin/members/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ regeneratePortal: true })
+      });
+      if (!res.ok) setMessage("再発行に失敗しました");
+      await load();
+    } finally {
+      setPending((prev) => {
+        const nextState = { ...prev };
+        delete nextState[id];
+        return nextState;
+      });
+    }
   }
 
   async function addLink(memberId: string) {
     const url = window.prompt("作品URLを入力") || "";
     if (!url) return;
-    const res = await fetch(`/api/admin/members/${memberId}/links`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url })
-    });
-    if (!res.ok) setMessage("リンク追加に失敗しました");
-    await load();
+    setPending((prev) => ({ ...prev, [memberId]: "addLink" }));
+    setMessage("更新中...");
+    try {
+      const res = await fetch(`/api/admin/members/${memberId}/links`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url })
+      });
+      if (!res.ok) setMessage("リンク追加に失敗しました");
+      await load();
+    } finally {
+      setPending((prev) => {
+        const nextState = { ...prev };
+        delete nextState[memberId];
+        return nextState;
+      });
+    }
   }
 
   async function removeLink(id: string) {
-    const res = await fetch(`/api/admin/member_links/${id}`, { method: "DELETE" });
-    if (!res.ok) setMessage("リンク削除に失敗しました");
-    await load();
+    setPendingLinkId(id);
+    setMessage("更新中...");
+    try {
+      const res = await fetch(`/api/admin/member_links/${id}`, { method: "DELETE" });
+      if (!res.ok) setMessage("リンク削除に失敗しました");
+      await load();
+    } finally {
+      setPendingLinkId(null);
+    }
   }
 
   async function saveIcon(memberId: string) {
     const draft = iconDrafts[memberId];
     if (!draft) return;
-    const res = await fetch(`/api/admin/members/${memberId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        iconUrl: draft.iconUrl.trim() || null,
-        iconFocusX: draft.focusX,
-        iconFocusY: draft.focusY
-      })
-    });
-    const data = (await res.json()) as { error?: string };
-    if (!res.ok) {
-      setMessage(data.error || "アイコン設定の保存に失敗しました");
-      return;
+    setPending((prev) => ({ ...prev, [memberId]: "saveIcon" }));
+    setMessage("更新中...");
+    try {
+      const res = await fetch(`/api/admin/members/${memberId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          iconUrl: draft.iconUrl.trim() || null,
+          iconFocusX: draft.focusX,
+          iconFocusY: draft.focusY
+        })
+      });
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok) {
+        setMessage(data.error || "アイコン設定の保存に失敗しました");
+        return;
+      }
+      setMessage("アイコン設定を保存しました");
+      await load();
+    } finally {
+      setPending((prev) => {
+        const nextState = { ...prev };
+        delete nextState[memberId];
+        return nextState;
+      });
     }
-    setMessage("アイコン設定を保存しました");
-    await load();
   }
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -169,7 +234,7 @@ export default function AdminMembersPage() {
         </div>
         <form action={addMember} className="split">
           <input name="displayName" placeholder="新規メンバー表示名" required />
-          <button className="btn primary" type="submit">
+          <button className={`btn primary${submitting ? " is-loading" : ""}`} type="submit" disabled={submitting}>
             追加
           </button>
         </form>
@@ -186,16 +251,36 @@ export default function AdminMembersPage() {
               <p className="meta">portal: /portal/{member.portal_token}</p>
             </div>
             <div className="split admin-actions">
-              <button className="btn" type="button" onClick={() => addLink(member.id)}>
+              <button
+                className={`btn${pending[member.id] === "addLink" ? " is-loading" : ""}`}
+                type="button"
+                onClick={() => addLink(member.id)}
+                disabled={Boolean(pending[member.id])}
+              >
                 作品リンク追加
               </button>
-              <button className="btn" type="button" onClick={() => regenerate(member.id)}>
+              <button
+                className={`btn${pending[member.id] === "regenerate" ? " is-loading" : ""}`}
+                type="button"
+                onClick={() => regenerate(member.id)}
+                disabled={Boolean(pending[member.id])}
+              >
                 ポータル再発行
               </button>
-              <button className="btn danger" type="button" onClick={() => deactivate(member.id)}>
+              <button
+                className={`btn danger${pending[member.id] === "deactivate" ? " is-loading" : ""}`}
+                type="button"
+                onClick={() => deactivate(member.id)}
+                disabled={Boolean(pending[member.id])}
+              >
                 非アクティブ化
               </button>
-              <button className="btn danger" type="button" onClick={() => hardDelete(member.id, member.display_name)}>
+              <button
+                className={`btn danger${pending[member.id] === "hardDelete" ? " is-loading" : ""}`}
+                type="button"
+                onClick={() => hardDelete(member.id, member.display_name)}
+                disabled={Boolean(pending[member.id])}
+              >
                 完全削除
               </button>
             </div>
@@ -267,7 +352,12 @@ export default function AdminMembersPage() {
               </div>
             </div>
               <div className="split admin-actions">
-              <button className="btn" type="button" onClick={() => saveIcon(member.id)}>
+              <button
+                className={`btn${pending[member.id] === "saveIcon" ? " is-loading" : ""}`}
+                type="button"
+                onClick={() => saveIcon(member.id)}
+                disabled={Boolean(pending[member.id])}
+              >
                 アイコン保存
               </button>
               <button
@@ -291,7 +381,12 @@ export default function AdminMembersPage() {
             {(linksByMember[member.id] || []).map((link) => (
               <div key={link.id} className="split">
                 <span className="meta">[{link.platform}] {link.url}</span>
-                <button className="btn danger" type="button" onClick={() => removeLink(link.id)}>
+                <button
+                  className={`btn danger${pendingLinkId === link.id ? " is-loading" : ""}`}
+                  type="button"
+                  onClick={() => removeLink(link.id)}
+                  disabled={pendingLinkId === link.id}
+                >
                   削除
                 </button>
               </div>

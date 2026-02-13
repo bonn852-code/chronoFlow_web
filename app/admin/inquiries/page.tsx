@@ -18,6 +18,7 @@ export default function AdminInquiriesPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(7);
   const [total, setTotal] = useState(0);
+  const [pendingId, setPendingId] = useState<string | null>(null);
 
   async function load(targetPage = page) {
     const res = await fetch(`/api/admin/inquiries?page=${targetPage}&pageSize=${pageSize}`, { cache: "no-store" });
@@ -39,14 +40,20 @@ export default function AdminInquiriesPage() {
 
   async function resolveAndDelete(id: string) {
     if (!window.confirm("このお問い合わせを対応済みとして削除しますか？")) return;
-    const res = await fetch(`/api/admin/inquiries/${id}`, { method: "DELETE" });
-    const data = (await res.json()) as { error?: string };
-    if (!res.ok) {
-      setMessage(data.error || "削除に失敗しました");
-      return;
+    setPendingId(id);
+    setMessage("更新中...");
+    try {
+      const res = await fetch(`/api/admin/inquiries/${id}`, { method: "DELETE" });
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok) {
+        setMessage(data.error || "削除に失敗しました");
+        return;
+      }
+      setMessage("対応済みとして削除しました");
+      await load(page);
+    } finally {
+      setPendingId(null);
     }
-    setMessage("対応済みとして削除しました");
-    await load(page);
   }
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -66,7 +73,12 @@ export default function AdminInquiriesPage() {
           <article key={item.id} className="card stack">
             <div className="split admin-actions">
               <strong>{item.subject}</strong>
-              <button className="btn danger" type="button" onClick={() => resolveAndDelete(item.id)}>
+              <button
+                className={`btn danger${pendingId === item.id ? " is-loading" : ""}`}
+                type="button"
+                onClick={() => resolveAndDelete(item.id)}
+                disabled={pendingId === item.id}
+              >
                 対応済みで削除
               </button>
             </div>
