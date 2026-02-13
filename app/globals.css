@@ -138,6 +138,20 @@ a {
   gap: 6px;
 }
 
+.admin-nav {
+  gap: 8px;
+  padding: 6px;
+  border-radius: 16px;
+  border: 1px solid rgba(26, 169, 255, 0.18);
+  background: rgba(233, 243, 255, 0.7);
+}
+
+.admin-nav .nav-link {
+  background: rgba(255, 255, 255, 0.92);
+  border-color: rgba(26, 169, 255, 0.14);
+  white-space: nowrap;
+}
+
 .nav-icon {
   display: inline-flex;
   width: 18px;
@@ -852,6 +866,20 @@ iframe {
 
   .site-nav .nav-logout {
     min-width: 92px;
+  }
+
+  .admin-nav {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    gap: 6px;
+    padding: 6px 8px;
+    scroll-snap-type: x proximity;
+  }
+
+  .admin-nav .nav-link {
+    flex: 0 0 auto;
+    scroll-snap-align: start;
   }
 
   main {

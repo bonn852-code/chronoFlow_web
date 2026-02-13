@@ -1,17 +1,32 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 export function AdminNav() {
+  const pathname = usePathname();
+  const items = [
+    { href: "/admin", label: "ダッシュボード", match: (p: string) => p === "/admin" },
+    { href: "/admin/auditions", label: "審査管理", match: (p: string) => p.startsWith("/admin/auditions") },
+    { href: "/admin/members", label: "メンバー管理", match: (p: string) => p.startsWith("/admin/members") },
+    { href: "/admin/users", label: "アカウント管理", match: (p: string) => p.startsWith("/admin/users") },
+    { href: "/admin/inquiries", label: "お問い合わせ管理", match: (p: string) => p.startsWith("/admin/inquiries") },
+    { href: "/admin/security", label: "運用監査", match: (p: string) => p.startsWith("/admin/security") },
+    { href: "/admin/assets", label: "素材管理", match: (p: string) => p.startsWith("/admin/assets") },
+    { href: "/admin/learn/ae", label: "AE学習管理", match: (p: string) => p.startsWith("/admin/learn/ae") },
+    { href: "/admin/announcements", label: "お知らせ管理", match: (p: string) => p.startsWith("/admin/announcements") }
+  ];
   return (
-    <nav className="nav">
-      <Link href="/admin">ダッシュボード</Link>
-      <Link href="/admin/auditions">審査管理</Link>
-      <Link href="/admin/members">メンバー管理</Link>
-      <Link href="/admin/users">アカウント管理</Link>
-      <Link href="/admin/inquiries">お問い合わせ管理</Link>
-      <Link href="/admin/security">運用監査</Link>
-      <Link href="/admin/assets">素材管理</Link>
-      <Link href="/admin/learn/ae">AE学習管理</Link>
-      <Link href="/admin/announcements">お知らせ管理</Link>
+    <nav className="nav admin-nav" aria-label="管理メニュー">
+      {items.map((item) => (
+        <Link
+          key={item.href}
+          href={item.href}
+          className={`nav-link${item.match(pathname) ? " active" : ""}`}
+        >
+          {item.label}
+        </Link>
+      ))}
     </nav>
   );
 }
