@@ -25,19 +25,25 @@ export async function GET(req: NextRequest) {
     is_member?: boolean;
     member_granted_at?: string | null;
   }> = [];
+  let hasMemberColumn = true;
   if (ids.length) {
     const withMember = await supabaseAdmin
       .from("user_account_controls")
       .select("user_id,is_suspended,suspend_reason,suspended_at,is_member,member_granted_at")
       .in("user_id", ids);
     if (withMember.error) {
-      if ((withMember.error as { code?: string }).code === "42703") {
+      const code = (withMember.error as { code?: string }).code;
+      if (code === "42703") {
+        hasMemberColumn = false;
         const legacy = await supabaseAdmin
           .from("user_account_controls")
           .select("user_id,is_suspended,suspend_reason,suspended_at")
           .in("user_id", ids);
         if (legacy.error) return jsonError("ユーザー制御情報の取得に失敗しました", 500);
         controls = legacy.data || [];
+      } else if (code === "42P01") {
+        hasMemberColumn = false;
+        controls = [];
       } else {
         return jsonError("ユーザー制御情報の取得に失敗しました", 500);
       }
@@ -47,9 +53,22 @@ export async function GET(req: NextRequest) {
   }
 
   const controlMap = new Map((controls || []).map((c) => [c.user_id, c]));
+  const memberMap = new Map<string, boolean>();
+  if (ids.length) {
+    const { data: members } = await supabaseAdmin
+      .from("members")
+      .select("user_id,is_active")
+      .in("user_id", ids)
+      .eq("is_active", true);
+    (members || []).forEach((m) => {
+      if (typeof m.user_id === "string") memberMap.set(m.user_id, Boolean(m.is_active));
+    });
+  }
   return jsonOk({
     users: users.map((u) => {
       const ctrl = controlMap.get(u.id);
+      const controlHasMember = Boolean(ctrl && "is_member" in ctrl);
+      const memberFallback = memberMap.get(u.id) ?? false;
       return {
         id: u.id,
         email: u.email,
@@ -58,7 +77,7 @@ export async function GET(req: NextRequest) {
         suspended: Boolean(ctrl?.is_suspended),
         suspendReason: ctrl?.suspend_reason || null,
         suspendedAt: ctrl?.suspended_at || null,
-        isMember: Boolean(ctrl?.is_member),
+        isMember: controlHasMember ? Boolean(ctrl?.is_member) : memberFallback,
         memberGrantedAt: ctrl?.member_granted_at || null
       };
     }),

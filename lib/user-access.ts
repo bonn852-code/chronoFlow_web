@@ -43,15 +43,27 @@ export async function getUserAccessState(
   userId: string
 ): Promise<{ suspended: boolean; reason: string | null; isMember: boolean }> {
   const { data, error } = await supabaseAdmin.from("user_account_controls").select("*").eq("user_id", userId).maybeSingle();
-  if (error) {
-    if ((error as { code?: string }).code === "42P01") {
-      return { suspended: false, reason: null, isMember: false };
-    }
+  if (error && (error as { code?: string }).code !== "42P01") {
     return { suspended: false, reason: null, isMember: false };
   }
+
+  const controlsAvailable = !error;
+  const hasMemberColumn = Boolean(data && "is_member" in data);
+  let isMember = hasMemberColumn ? Boolean(data?.is_member) : false;
+
+  if (!hasMemberColumn) {
+    const { data: memberRow } = await supabaseAdmin
+      .from("members")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("is_active", true)
+      .maybeSingle();
+    isMember = Boolean(memberRow?.id);
+  }
+
   return {
-    suspended: Boolean(data?.is_suspended),
-    reason: data?.suspend_reason ?? null,
-    isMember: Boolean(data?.is_member)
+    suspended: controlsAvailable ? Boolean(data?.is_suspended) : false,
+    reason: controlsAvailable ? data?.suspend_reason ?? null : null,
+    isMember
   };
 }

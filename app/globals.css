@@ -488,6 +488,18 @@ textarea {
   min-width: 0;
 }
 
+.admin-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.admin-actions .btn {
+  white-space: nowrap;
+}
+
 .notice {
   border-left: 3px solid var(--accent);
   padding-left: 10px;

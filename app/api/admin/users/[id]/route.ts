@@ -23,28 +23,45 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const email = userData.user.email?.toLowerCase() || "";
   if (email === env.adminEmail.toLowerCase()) return jsonError("管理者アカウントは停止できません", 403);
 
-  const prev = await supabaseAdmin
-    .from("user_account_controls")
-    .select("*")
-    .eq("user_id", id)
-    .maybeSingle();
+  const prev = await supabaseAdmin.from("user_account_controls").select("*").eq("user_id", id).maybeSingle();
+  const prevErrorCode = (prev.error as { code?: string } | null)?.code;
+  if (prev.error && prevErrorCode !== "42P01") {
+    return jsonError("ユーザー停止状態の更新に失敗しました", 500);
+  }
 
+  const controlsAvailable = !prev.error;
   const current = prev.data || {};
   const nextSuspended = typeof body.suspended === "boolean" ? body.suspended : Boolean(current.is_suspended);
   const nextIsMember = typeof body.isMember === "boolean" ? body.isMember : Boolean(current.is_member);
   const reason = nextSuspended ? safeText(body.reason, 0, 500) : null;
-  const payload = {
+  const basePayload = {
     user_id: id,
     is_suspended: nextSuspended,
     suspend_reason: nextSuspended ? reason : null,
     suspended_at: nextSuspended ? new Date().toISOString() : null,
-    is_member: nextIsMember,
-    member_granted_at: nextIsMember ? new Date().toISOString() : null,
     updated_at: new Date().toISOString()
   };
 
-  const { error } = await supabaseAdmin.from("user_account_controls").upsert(payload, { onConflict: "user_id" });
-  if (error) return jsonError("ユーザー停止状態の更新に失敗しました", 500);
+  if (controlsAvailable) {
+    const payload = {
+      ...basePayload,
+      is_member: nextIsMember,
+      member_granted_at: nextIsMember ? new Date().toISOString() : null
+    };
+
+    const { error } = await supabaseAdmin.from("user_account_controls").upsert(payload, { onConflict: "user_id" });
+    if (error) {
+      const code = (error as { code?: string }).code;
+      if (code === "42703") {
+        const { error: fallbackError } = await supabaseAdmin.from("user_account_controls").upsert(basePayload, { onConflict: "user_id" });
+        if (fallbackError) return jsonError("ユーザー停止状態の更新に失敗しました", 500);
+      } else {
+        return jsonError("ユーザー停止状態の更新に失敗しました", 500);
+      }
+    }
+  } else if (typeof body.suspended === "boolean") {
+    return jsonError("ユーザー停止状態の更新に失敗しました", 500);
+  }
 
   if (typeof body.isMember === "boolean") {
     if (nextIsMember) {
