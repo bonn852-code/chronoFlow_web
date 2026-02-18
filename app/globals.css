@@ -895,11 +895,10 @@ iframe {
     right: 0;
     bottom: 0;
     z-index: 90;
-    --nav-lift: 0px;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(245, 249, 255, 0.6));
-    border-top: 1px solid rgba(255, 255, 255, 0.65);
-    backdrop-filter: blur(18px) saturate(1.15);
-    box-shadow: 0 -14px 30px rgba(20, 40, 80, 0.12);
+    background: rgba(255, 255, 255, 0.25);
+    border-top: 1px solid rgba(255, 255, 255, 0.4);
+    backdrop-filter: blur(20px) saturate(1.35) contrast(1.05);
+    box-shadow: 0 -18px 32px rgba(20, 40, 80, 0.12);
     padding: 8px 10px calc(env(safe-area-inset-bottom) + 8px);
     margin: 0;
     display: flex;
@@ -907,31 +906,27 @@ iframe {
     justify-content: space-between;
     gap: 6px;
     overflow: hidden;
-    transform: translateY(var(--nav-lift));
-    transition: background 220ms ease, box-shadow 220ms ease, border-color 220ms ease, transform 220ms ease;
+    isolation: isolate;
+    transition: background 220ms ease, box-shadow 220ms ease, border-color 220ms ease;
   }
 
   .site-nav.nav-elevated {
-    --nav-lift: -4px;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(244, 249, 255, 0.78));
-    border-top-color: rgba(255, 255, 255, 0.92);
-    box-shadow: 0 -20px 36px rgba(20, 40, 80, 0.18);
+    background: rgba(255, 255, 255, 0.38);
+    border-top-color: rgba(255, 255, 255, 0.7);
+    box-shadow: 0 -22px 38px rgba(20, 40, 80, 0.18);
   }
 
-  .site-nav.nav-scroll {
-    animation: nav-breathe 420ms ease;
-  }
-
-  @keyframes nav-breathe {
-    0% {
-      transform: translateY(var(--nav-lift));
-    }
-    45% {
-      transform: translateY(calc(var(--nav-lift) - 5px));
-    }
-    100% {
-      transform: translateY(var(--nav-lift));
-    }
+  .site-nav::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(circle at 20% 120%, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 60%),
+      radial-gradient(circle at 80% -40%, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0) 55%);
+    backdrop-filter: blur(30px) saturate(1.6);
+    opacity: 0.9;
+    pointer-events: none;
+    mix-blend-mode: screen;
   }
 
   .site-header .site-nav {
@@ -956,7 +951,7 @@ iframe {
 
   .site-nav .nav-link {
     color: #1a2f48;
-    background: rgba(255, 255, 255, 0.35);
+    background: rgba(255, 255, 255, 0.28);
     border-color: transparent;
   }
 
@@ -964,7 +959,7 @@ iframe {
   .site-nav .nav-link:hover {
     color: #0c1c2c;
     border-color: rgba(26, 169, 255, 0.35);
-    background: rgba(255, 255, 255, 0.7);
+    background: rgba(255, 255, 255, 0.6);
   }
 
   .site-nav .nav-icon {
