@@ -35,7 +35,7 @@ export default async function RankingsPage({
       </section>
 
       <section className="card">
-        <table className="table">
+        <table className="table ranking-table">
           <thead>
             <tr>
               <th>#</th>
@@ -47,12 +47,12 @@ export default async function RankingsPage({
           <tbody>
             {rankings.map((row, idx) => (
               <tr key={row.member_id}>
-                <td>{(page - 1) * pageSize + idx + 1}</td>
-                <td>
+                <td data-label="#">{(page - 1) * pageSize + idx + 1}</td>
+                <td data-label="メンバー">
                   <Link href={`/members/${row.member_id}`}>{row.members.display_name}</Link>
                 </td>
-                <td>{new Date(row.members.joined_at).toLocaleDateString("ja-JP")}</td>
-                <td>{row.reaction_count}</td>
+                <td data-label="加入日">{new Date(row.members.joined_at).toLocaleDateString("ja-JP")}</td>
+                <td data-label="いいね">{row.reaction_count}</td>
               </tr>
             ))}
           </tbody>

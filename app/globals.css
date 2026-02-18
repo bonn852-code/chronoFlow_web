@@ -490,10 +490,27 @@ select:focus {
 }
 
 input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   margin-right: 8px;
   accent-color: var(--accent);
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.checkbox-label input[type="checkbox"] {
+  margin-top: 2px;
+  flex: 0 0 auto;
+}
+
+.checkbox-label span {
+  flex: 1 1 auto;
 }
 
 textarea {
@@ -635,6 +652,10 @@ textarea {
   letter-spacing: 0.02em;
   color: #3f5879;
   background: rgba(233, 243, 255, 0.72);
+}
+
+.ranking-table td {
+  white-space: normal;
 }
 
 .member-detail-page {
@@ -970,6 +991,50 @@ iframe {
   .table thead,
   .table tbody {
     white-space: nowrap;
+  }
+
+  .ranking-table {
+    display: block;
+    overflow: visible;
+    white-space: normal;
+    background: transparent;
+    border-radius: 0;
+  }
+
+  .ranking-table thead {
+    display: none;
+  }
+
+  .ranking-table tbody {
+    display: grid;
+    gap: 10px;
+  }
+
+  .ranking-table tbody tr {
+    display: grid;
+    gap: 6px;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: linear-gradient(180deg, var(--panel-strong), var(--panel));
+    box-shadow: var(--shadow);
+  }
+
+  .ranking-table td {
+    display: flex;
+    gap: 10px;
+    padding: 0;
+    border: 0;
+    white-space: normal;
+  }
+
+  .ranking-table td::before {
+    content: attr(data-label);
+    flex: 0 0 4.6em;
+    color: #3f5879;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
   }
 
   .home-members-grid {

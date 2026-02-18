@@ -189,13 +189,13 @@ export default function AuditionForm() {
             <textarea name="sns_urls" placeholder="https://tiktok.com/..." />
           </label>
           <p className="meta">動画URL/SNS URLは YouTube・TikTok・Instagram のみ受け付けます。</p>
-          <label>
+          <label className="checkbox-label">
             <input type="checkbox" name="consent_public_profile" required />
-            合格時に表示名/作品の掲載に同意する
+            <span>合格時に表示名/作品の掲載に同意する</span>
           </label>
-          <label>
+          <label className="checkbox-label">
             <input type="checkbox" name="consent_advice" />
-            不合格時のアドバイスを希望する
+            <span>不合格時のアドバイスを希望する</span>
           </label>
           <button className="btn primary" type="submit" disabled={loading || isOpen !== true || !isLoggedIn}>
             {loading ? "送信中..." : "申請する"}
