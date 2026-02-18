@@ -895,8 +895,11 @@ iframe {
     right: 0;
     bottom: 0;
     z-index: 90;
-    background: rgba(255, 255, 255, 0.96);
-    border-top: 1px solid var(--line);
+    --nav-lift: 0px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(245, 249, 255, 0.6));
+    border-top: 1px solid rgba(255, 255, 255, 0.65);
+    backdrop-filter: blur(18px) saturate(1.15);
+    box-shadow: 0 -14px 30px rgba(20, 40, 80, 0.12);
     padding: 8px 10px calc(env(safe-area-inset-bottom) + 8px);
     margin: 0;
     display: flex;
@@ -904,6 +907,31 @@ iframe {
     justify-content: space-between;
     gap: 6px;
     overflow: hidden;
+    transform: translateY(var(--nav-lift));
+    transition: background 220ms ease, box-shadow 220ms ease, border-color 220ms ease, transform 220ms ease;
+  }
+
+  .site-nav.nav-elevated {
+    --nav-lift: -4px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(244, 249, 255, 0.78));
+    border-top-color: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 -20px 36px rgba(20, 40, 80, 0.18);
+  }
+
+  .site-nav.nav-scroll {
+    animation: nav-breathe 420ms ease;
+  }
+
+  @keyframes nav-breathe {
+    0% {
+      transform: translateY(var(--nav-lift));
+    }
+    45% {
+      transform: translateY(calc(var(--nav-lift) - 5px));
+    }
+    100% {
+      transform: translateY(var(--nav-lift));
+    }
   }
 
   .site-header .site-nav {
@@ -924,6 +952,19 @@ iframe {
     min-height: 42px;
     min-width: 0;
     flex: 1 1 0;
+  }
+
+  .site-nav .nav-link {
+    color: #1a2f48;
+    background: rgba(255, 255, 255, 0.35);
+    border-color: transparent;
+  }
+
+  .site-nav .nav-link.active,
+  .site-nav .nav-link:hover {
+    color: #0c1c2c;
+    border-color: rgba(26, 169, 255, 0.35);
+    background: rgba(255, 255, 255, 0.7);
   }
 
   .site-nav .nav-icon {

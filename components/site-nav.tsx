@@ -15,6 +15,8 @@ export function SiteNav({ mobile }: { mobile?: boolean } = {}) {
   const [loggedIn, setLoggedIn] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isMember, setIsMember] = useState(false);
+  const [navElevated, setNavElevated] = useState(false);
+  const [navScrolling, setNavScrolling] = useState(false);
 
   async function syncAdminSession(sessionToken?: string) {
     if (!sessionToken) return;
@@ -129,6 +131,24 @@ export function SiteNav({ mobile }: { mobile?: boolean } = {}) {
     });
   }, [isAdmin, isMember, router]);
 
+  useEffect(() => {
+    if (!mobile) return;
+    let timeoutId: number | null = null;
+    const onScroll = () => {
+      const y = window.scrollY || 0;
+      setNavElevated(y > 6);
+      setNavScrolling(true);
+      if (timeoutId) window.clearTimeout(timeoutId);
+      timeoutId = window.setTimeout(() => setNavScrolling(false), 160);
+    };
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (timeoutId) window.clearTimeout(timeoutId);
+    };
+  }, [mobile]);
+
   async function openAdmin(event: MouseEvent<HTMLAnchorElement>) {
     event.preventDefault();
     router.push("/enter-admin");
@@ -139,7 +159,7 @@ export function SiteNav({ mobile }: { mobile?: boolean } = {}) {
   }
 
   return (
-    <nav className={`nav site-nav${mobile ? " mobile-bottom-nav" : ""}`}>
+    <nav className={`nav site-nav${mobile ? " mobile-bottom-nav" : ""}${navElevated ? " nav-elevated" : ""}${navScrolling ? " nav-scroll" : ""}`}>
       <Link href="/members" className={navClass((p) => p.startsWith("/members"))} aria-label="メンバー">
         <span className="nav-icon" aria-hidden="true">
           <Image src="/icons/team.png" alt="" width={22} height={22} />
