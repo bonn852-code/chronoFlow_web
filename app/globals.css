@@ -895,10 +895,10 @@ iframe {
     right: 0;
     bottom: 0;
     z-index: 90;
-    background: rgba(255, 255, 255, 0.25);
-    border-top: 1px solid rgba(255, 255, 255, 0.4);
-    backdrop-filter: blur(20px) saturate(1.35) contrast(1.05);
-    box-shadow: 0 -18px 32px rgba(20, 40, 80, 0.12);
+    background: rgba(255, 255, 255, 0.16);
+    border-top: 1px solid rgba(255, 255, 255, 0.3);
+    backdrop-filter: blur(22px) saturate(1.4);
+    box-shadow: 0 -18px 30px rgba(10, 18, 30, 0.18);
     padding: 8px 10px calc(env(safe-area-inset-bottom) + 8px);
     margin: 0;
     display: flex;
@@ -911,20 +911,21 @@ iframe {
   }
 
   .site-nav.nav-elevated {
-    background: rgba(255, 255, 255, 0.38);
-    border-top-color: rgba(255, 255, 255, 0.7);
-    box-shadow: 0 -22px 38px rgba(20, 40, 80, 0.18);
+    background: rgba(255, 255, 255, 0.22);
+    border-top-color: rgba(255, 255, 255, 0.45);
+    box-shadow: 0 -22px 36px rgba(10, 18, 30, 0.2);
   }
 
   .site-nav::before {
     content: "";
     position: absolute;
-    inset: 0;
+    inset: -20px;
     background:
-      radial-gradient(circle at 20% 120%, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 60%),
-      radial-gradient(circle at 80% -40%, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0) 55%);
-    backdrop-filter: blur(30px) saturate(1.6);
-    opacity: 0.9;
+      radial-gradient(circle at 15% 120%, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0) 58%),
+      radial-gradient(circle at 85% -30%, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0) 55%);
+    backdrop-filter: blur(28px) saturate(1.7);
+    transform: scale(1.06);
+    opacity: 0.85;
     pointer-events: none;
     mix-blend-mode: screen;
   }
@@ -950,16 +951,16 @@ iframe {
   }
 
   .site-nav .nav-link {
-    color: #1a2f48;
-    background: rgba(255, 255, 255, 0.28);
+    color: #0a0a0a;
+    background: rgba(255, 255, 255, 0.12);
     border-color: transparent;
   }
 
   .site-nav .nav-link.active,
   .site-nav .nav-link:hover {
-    color: #0c1c2c;
-    border-color: rgba(26, 169, 255, 0.35);
-    background: rgba(255, 255, 255, 0.6);
+    color: #0a0a0a;
+    border-color: rgba(255, 255, 255, 0.5);
+    background: rgba(255, 255, 255, 0.35);
   }
 
   .site-nav .nav-icon {
@@ -974,6 +975,7 @@ iframe {
     width: 22px;
     height: 22px;
     object-fit: contain;
+    filter: grayscale(1) brightness(0);
   }
 
   .site-nav .nav-icon svg {
